@@ -10,6 +10,8 @@ export default function PromoCodesPage() {
   const [promos, setPromos] = useState<PromoCodeItem[]>([]);
   const [newCode, setNewCode] = useState('');
   const [newBookmaker, setNewBookmaker] = useState('XParibet');
+  const [isCustomBookmaker, setIsCustomBookmaker] = useState(false);
+  const [customBookmakerText, setCustomBookmakerText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +23,9 @@ export default function PromoCodesPage() {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(null), 3000);
   };
+
+  const defaultBookmakers = ['XParibet', 'Melbet', '1xBet', 'Linebet', '888starz', 'Betwinner', 'Betway', 'SportyBet', '1Win', 'Mostbet', 'Megapari'];
+  const allAvailableBookmakers = Array.from(new Set([...defaultBookmakers, ...promos.map(p => p.bookmaker).filter(Boolean)]));
 
   const loadPromos = useCallback(async () => {
     setIsLoading(true);
@@ -42,6 +47,13 @@ export default function PromoCodesPage() {
   const handleAddPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode.trim()) return;
+
+    const bookmakerToUse = isCustomBookmaker ? customBookmakerText.trim() : newBookmaker.trim();
+    if (!bookmakerToUse) {
+      setError('Veuillez spécifier le nom du bookmaker ou de la plateforme.');
+      return;
+    }
+
     setIsAdding(true);
     setError(null);
     try {
@@ -52,15 +64,17 @@ export default function PromoCodesPage() {
       }
 
       const created = await api.createPromoCode({
-        code: newCode.trim().toLowerCase(),
-        bookmaker: newBookmaker,
+        code: newCode.trim().toUpperCase(),
+        bookmaker: bookmakerToUse,
         exampleImageUrl,
       });
 
       setPromos([created, ...promos]);
       setNewCode('');
+      setCustomBookmakerText('');
+      setIsCustomBookmaker(false);
       setSelectedFile(null);
-      showSuccess(`Code "${created.code}" ajouté avec succès !`);
+      showSuccess(`Code "${created.code}" (${created.bookmaker}) ajouté avec succès !`);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création du code promo.');
     } finally {
@@ -268,20 +282,68 @@ export default function PromoCodesPage() {
 
           <form onSubmit={handleAddPromo}>
             <div className="form-group">
-              <label className="form-label" htmlFor="bookmaker-select">Bookmaker / Plateforme</label>
-              <select
-                id="bookmaker-select"
-                className="form-input"
-                value={newBookmaker}
-                onChange={(e) => setNewBookmaker(e.target.value)}
-              >
-                <option value="XParibet">XParibet</option>
-                <option value="Melbet">Melbet</option>
-                <option value="1xBet">1xBet</option>
-                <option value="Linebet">Linebet</option>
-                <option value="888starz">888starz</option>
-                <option value="Betwinner">Betwinner</option>
-              </select>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label className="form-label" htmlFor="bookmaker-select" style={{ margin: 0 }}>
+                  Bookmaker / Plateforme
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomBookmaker(!isCustomBookmaker);
+                    if (!isCustomBookmaker && !customBookmakerText) {
+                      setCustomBookmakerText('');
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-secondary)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: 0,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {isCustomBookmaker ? '📋 Choisir dans la liste' : '✏️ Écrire un autre nom'}
+                </button>
+              </div>
+
+              {isCustomBookmaker ? (
+                <div>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Entrez le nom de la plateforme (ex: 1Win, Mostbet, Betclic...)"
+                    value={customBookmakerText}
+                    onChange={(e) => setCustomBookmakerText(e.target.value)}
+                    autoFocus
+                    required
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                    💡 Cette nouvelle plateforme sera automatiquement enregistrée pour vos prochaines campagnes.
+                  </span>
+                </div>
+              ) : (
+                <select
+                  id="bookmaker-select"
+                  className="form-input"
+                  value={newBookmaker}
+                  onChange={(e) => {
+                    if (e.target.value === '__OTHER__') {
+                      setIsCustomBookmaker(true);
+                      setCustomBookmakerText('');
+                    } else {
+                      setNewBookmaker(e.target.value);
+                    }
+                  }}
+                >
+                  {allAvailableBookmakers.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                  <option value="__OTHER__">➕ Autre plateforme (écrire un nouveau nom...)</option>
+                </select>
+              )}
             </div>
 
             <div className="form-group">
