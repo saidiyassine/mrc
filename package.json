@@ -4,6 +4,8 @@
   "private": true,
   "description": "Monorepo root for Gambling Affiliate Manager (Next.js Dashboard + NestJS Backend)",
   "scripts": {
+    "build": "npm --prefix backend install && npm --prefix backend run build",
+    "start": "npm --prefix backend run start:prod",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "install:all": "npm --prefix backend install && npm --prefix dashboard install",
