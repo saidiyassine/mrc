@@ -38,6 +38,7 @@ model Order {
   targetAccounts        Int           // e.g. 20 accounts wanted
   claimedCount          Int           @default(0) // actual claimed count
   freeDepositConditions String        // Instructions: "Join channel, register with promo code..."
+  telegramChannelUrl    String?       // e.g. "https://t.me/my_channel"
   status                String        @default("ACTIVE") // PENDING, ACTIVE, COMPLETED, PAUSED
   claims                PlayerClaim[]
   createdAt             DateTime      @default(now())

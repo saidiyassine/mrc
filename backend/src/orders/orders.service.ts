@@ -21,6 +21,7 @@ export class OrdersService {
     promoCodeId: string;
     targetAccounts: number;
     freeDepositConditions: string;
+    telegramChannelUrl?: string;
   }) {
     // Verify promo code exists
     const promo = await this.prisma.promoCode.findUnique({
@@ -34,6 +35,7 @@ export class OrdersService {
         promoCodeId: data.promoCodeId,
         targetAccounts: Number(data.targetAccounts),
         freeDepositConditions: data.freeDepositConditions,
+        telegramChannelUrl: data.telegramChannelUrl ? data.telegramChannelUrl.trim() : null,
         status: 'ACTIVE',
       },
       include: { promoCode: true },

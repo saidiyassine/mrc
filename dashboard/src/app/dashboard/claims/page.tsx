@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, CheckCircle, XCircle, ShieldCheck, Search, Filter, RefreshCw, AlertCircle, ImageIcon, X, Trash2 } from 'lucide-react';
+import { Users, CheckCircle, XCircle, ShieldCheck, Search, Filter, RefreshCw, AlertCircle, ImageIcon, X, Trash2, MessageSquare, ExternalLink, Send, Loader2 } from 'lucide-react';
 import { api, PlayerClaimItem } from '@/lib/api';
 
 function ClaimScreenshotCell({
@@ -168,6 +168,47 @@ export default function ClaimsPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ claimId: string; playerName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  // Contact Client Modal State
+  const [contactModal, setContactModal] = useState<{
+    chatId: string;
+    name: string;
+    username?: string;
+    bookmaker?: string;
+    promoCode?: string;
+    bookmakerId?: string;
+  } | null>(null);
+  const [contactMessage, setContactMessage] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  const openContactModal = (claim: PlayerClaimItem) => {
+    setContactMessage('');
+    setContactModal({
+      chatId: claim.telegramChatId,
+      name: claim.telegramName || 'Joueur',
+      username: claim.telegramUsername,
+      bookmaker: claim.promoCode?.bookmaker,
+      promoCode: claim.promoCode?.code,
+      bookmakerId: claim.playerBookmakerId,
+    });
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactModal || !contactMessage.trim()) return;
+
+    setIsSendingMessage(true);
+    try {
+      await api.sendTelegramMessage(contactModal.chatId, contactMessage.trim());
+      showSuccess(`Message envoyé avec succès à ${contactModal.name} sur Telegram.`);
+      setContactModal(null);
+      setContactMessage('');
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de l'envoi du message.");
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -381,7 +422,7 @@ export default function ClaimsPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         {claim.status === 'PENDING' && (
                           <button
                             className="btn-primary"
@@ -403,6 +444,27 @@ export default function ClaimsPage() {
                             <XCircle size={15} color="var(--color-danger)" />
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{
+                            padding: '0.4rem 0.65rem',
+                            fontSize: '0.78rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            background: 'rgba(6, 182, 212, 0.12)',
+                            color: 'var(--accent-secondary)',
+                            border: '1px solid rgba(6, 182, 212, 0.3)',
+                          }}
+                          onClick={() => openContactModal(claim)}
+                          title="Contacter le joueur directement sur Telegram"
+                        >
+                          <MessageSquare size={13} />
+                          <span>Contacter</span>
+                        </button>
+
                         <button
                           className="btn-icon"
                           style={{ borderColor: 'rgba(239,68,68,0.5)', background: 'rgba(239,68,68,0.08)' }}
@@ -588,6 +650,193 @@ export default function ClaimsPage() {
               <XCircle size={14} /> Confirmer le rejet
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal Contacter le Client */}
+    {contactModal && (
+      <div
+        onClick={() => setContactModal(null)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(6px)',
+          padding: '1rem',
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            borderRadius: '16px',
+            padding: '1.75rem',
+            width: '100%',
+            maxWidth: '540px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                <MessageSquare size={20} color="var(--accent-secondary)" />
+                Contacter le Joueur
+              </h3>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                {contactModal.name} {contactModal.username ? `(@${contactModal.username})` : ''} • ID: <code>{contactModal.chatId}</code>
+              </p>
+            </div>
+            <button
+              onClick={() => setContactModal(null)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.2rem' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Quick Direct Link (Telegram 1-on-1) */}
+          <div style={{
+            background: 'rgba(6, 182, 212, 0.08)',
+            border: '1px solid rgba(6, 182, 212, 0.25)',
+            borderRadius: '10px',
+            padding: '0.85rem 1rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-secondary)' }}>
+                Discussion Privée Telegram
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {contactModal.username ? `Ouvrir le chat avec @${contactModal.username}` : `Ouvrir le profil Telegram (ID: ${contactModal.chatId})`}
+              </div>
+            </div>
+
+            <a
+              href={contactModal.username ? `https://t.me/${contactModal.username}` : `tg://user?id=${contactModal.chatId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.35rem 0.85rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                textDecoration: 'none',
+                background: 'var(--accent-secondary)',
+                borderColor: 'var(--accent-secondary)',
+                color: '#000',
+                fontWeight: 700,
+              }}
+            >
+              <span>Ouvrir sur Telegram</span>
+              <ExternalLink size={13} />
+            </a>
+          </div>
+
+          {/* Send Bot Message Form */}
+          <form onSubmit={handleSendMessage}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>
+              ✉️ Envoyer un message direct via le Bot Telegram :
+            </label>
+
+            {/* Quick Arabic Templates */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
+              {[
+                'سلام أخي، عافاك عاود صيفط سكرين شوت واضحة كيبان فيها الكود برومو.',
+                'مرحباً بك! تأكد بلي تسجلتي بالحساب الجديد ودخلتي الكود برومو الصحيح.',
+                'سلام، الأيدي اللي صيفطتي ما كيتطابقش مع الحساب المسجل.',
+                'تنبيه: خاصك تبدأ تلعب وتراهن بالحساب ديالك باش تفعل السحب.',
+              ].map((template) => (
+                <button
+                  key={template}
+                  type="button"
+                  onClick={() => setContactMessage(template)}
+                  style={{
+                    padding: '0.25rem 0.55rem',
+                    borderRadius: '999px',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.03)',
+                    color: 'var(--text-secondary)',
+                    direction: 'rtl',
+                    textAlign: 'right',
+                  }}
+                >
+                  ⚡ {template.slice(0, 38)}...
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={contactMessage}
+              onChange={e => setContactMessage(e.target.value)}
+              placeholder="اكتب الرسالة هنا التي سيستلمها اللاعب عبر البوت على التيليجرام..."
+              rows={4}
+              required
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: '0.88rem',
+                resize: 'vertical',
+                marginBottom: '1.25rem',
+                outline: 'none',
+                boxSizing: 'border-box',
+                direction: 'rtl',
+                textAlign: 'right',
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-icon"
+                onClick={() => setContactModal(null)}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                disabled={isSendingMessage}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isSendingMessage || !contactMessage.trim()}
+                style={{
+                  padding: '0.5rem 1.2rem',
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                {isSendingMessage ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Envoi en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    <span>Envoyer sur Telegram</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     )}

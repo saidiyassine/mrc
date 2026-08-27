@@ -49,24 +49,22 @@ export class TelegramService implements OnModuleInit {
 
     while (this.isPolling) {
       try {
-        const response = await fetch(`${this.apiUrl}/getUpdates?offset=${this.offset}&timeout=5`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(`${this.apiUrl}/getUpdates?offset=${this.offset}&timeout=10`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
         const data = await response.json();
 
         if (data.ok && Array.isArray(data.result)) {
           for (const update of data.result) {
             this.offset = update.update_id + 1;
-            this.logger.log(`Processing Telegram update ${update.update_id}...`);
+            this.logger.log(`Received Telegram update ${update.update_id}...`);
 
-            // Try adding to BullMQ asynchronously without blocking direct processing
-            if (this.telegramQueue) {
-              Promise.race([
-                this.telegramQueue.add('handle-webhook-update', { update }, { attempts: 3 }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 500)),
-              ]).catch(() => {
-                // Ignore Redis queue errors in long polling mode
-              });
-            }
-
+            // Process directly to ensure immediate response
             try {
               await this.telegramProcessor.handleTelegramUpdate(update);
             } catch (e) {
@@ -75,8 +73,10 @@ export class TelegramService implements OnModuleInit {
           }
         }
       } catch (error) {
-        this.logger.error(`Telegram polling error: ${error.message}`);
-        await new Promise(res => setTimeout(res, 3000));
+        if (error.name !== 'AbortError') {
+          this.logger.error(`Telegram polling error: ${error.message}`);
+        }
+        await new Promise(res => setTimeout(res, 2000));
       }
     }
   }
@@ -113,16 +113,59 @@ export class TelegramService implements OnModuleInit {
     }
   }
 
+  private readonly photoFileIdCache = new Map<string, string>();
+
   /**
-   * Send photo to a specific Chat ID
+   * Send photo to a specific Chat ID (with automatic file_id caching for instant delivery)
    */
   async sendPhoto(chatId: string | number, photoUrlOrFilePath: string, caption?: string, replyMarkup?: any): Promise<any> {
     try {
+      // 1. If we already uploaded this local file, use the cached Telegram file_id (instant ~50ms delivery)
+      const cachedFileId = this.photoFileIdCache.get(photoUrlOrFilePath);
+      if (cachedFileId) {
+        const body: any = {
+          chat_id: chatId,
+          photo: cachedFileId,
+          caption,
+          parse_mode: 'HTML',
+        };
+        if (replyMarkup) body.reply_markup = replyMarkup;
+
+        const response = await fetch(`${this.apiUrl}/sendPhoto`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (data.ok) {
+          this.logger.log(`Successfully sent cached photo to Telegram chatId ${chatId}`);
+          return data;
+        }
+        // If cached file_id expired or failed, invalidate cache and re-upload
+        this.photoFileIdCache.delete(photoUrlOrFilePath);
+      }
+
       let response: Response;
 
       if (fs.existsSync(photoUrlOrFilePath)) {
-        const fileBuffer = fs.readFileSync(photoUrlOrFilePath);
-        const fileName = path.basename(photoUrlOrFilePath);
+        let fileBuffer = fs.readFileSync(photoUrlOrFilePath);
+        let fileName = path.basename(photoUrlOrFilePath);
+
+        // If file is larger than 4MB, compress it with sharp on the fly to guarantee Telegram acceptance
+        if (fileBuffer.length > 4 * 1024 * 1024) {
+          try {
+            const sharp = require('sharp');
+            fileBuffer = await sharp(fileBuffer)
+              .resize({ width: 1400, withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toBuffer();
+            fileName = fileName.replace(/\.[^/.]+$/, "") + '.jpg';
+            this.logger.log(`Compressed large photo (${path.basename(photoUrlOrFilePath)}) to ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+          } catch (sharpErr) {
+            this.logger.warn(`Sharp compression failed: ${sharpErr.message}`);
+          }
+        }
+
         const formData = new FormData();
         formData.append('chat_id', String(chatId));
         formData.append('photo', new Blob([fileBuffer]), fileName);
@@ -153,8 +196,45 @@ export class TelegramService implements OnModuleInit {
       const data = await response.json();
       if (!data.ok) {
         this.logger.error(`Telegram API Error (sendPhoto): ${JSON.stringify(data)}`);
+
+        // If sendPhoto failed and we have a local file, try sending compressed buffer as JPEG fallback
+        if (fs.existsSync(photoUrlOrFilePath)) {
+          try {
+            const sharp = require('sharp');
+            const compressed = await sharp(photoUrlOrFilePath)
+              .resize({ width: 1080, withoutEnlargement: true })
+              .jpeg({ quality: 75 })
+              .toBuffer();
+
+            const fallbackFormData = new FormData();
+            fallbackFormData.append('chat_id', String(chatId));
+            fallbackFormData.append('photo', new Blob([compressed]), 'compressed.jpg');
+            if (caption) fallbackFormData.append('caption', caption);
+            fallbackFormData.append('parse_mode', 'HTML');
+            if (replyMarkup) fallbackFormData.append('reply_markup', JSON.stringify(replyMarkup));
+
+            const retryRes = await fetch(`${this.apiUrl}/sendPhoto`, {
+              method: 'POST',
+              body: fallbackFormData,
+            });
+            const retryData = await retryRes.json();
+            if (retryData.ok) {
+              this.logger.log(`Successfully sent photo with fallback compression to ${chatId}`);
+              return retryData;
+            }
+          } catch (e) {}
+        }
+
         throw new Error(data.description || 'Failed to send telegram photo');
       }
+
+      // Cache Telegram's file_id so all future requests send instantly
+      if (data.result?.photo && Array.isArray(data.result.photo) && data.result.photo.length > 0) {
+        const uploadedFileId = data.result.photo[data.result.photo.length - 1].file_id;
+        this.photoFileIdCache.set(photoUrlOrFilePath, uploadedFileId);
+        this.logger.log(`Cached Telegram file_id for ${path.basename(photoUrlOrFilePath)}: ${uploadedFileId}`);
+      }
+
       this.logger.log(`Successfully sent photo to Telegram chatId ${chatId}`);
       return data;
     } catch (error) {

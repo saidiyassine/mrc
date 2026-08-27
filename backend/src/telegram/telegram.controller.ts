@@ -45,4 +45,12 @@ export class TelegramController {
     // Return 200 OK instantly to Telegram
     return { status: 'queued' };
   }
+
+  @Post('send-message')
+  async sendMessageToUser(@Body() body: { chatId: string; text: string }) {
+    if (!body.chatId || !body.text) {
+      throw new Error('chatId and text are required');
+    }
+    return this.telegramService.sendMessage(body.chatId, body.text);
+  }
 }

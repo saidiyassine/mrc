@@ -64,7 +64,7 @@ export class TelegramProcessor extends WorkerHost {
       const user = callbackQuery.from || {};
       const firstName = user.first_name || '';
       const lastName = user.last_name || '';
-      const fullName = `${firstName} ${lastName}`.trim() || 'Joueur';
+      const fullName = `${firstName} ${lastName}`.trim() || 'لاعب';
 
       await this.telegramService.answerCallbackQuery(callbackId);
 
@@ -95,7 +95,7 @@ export class TelegramProcessor extends WorkerHost {
     const username = update.message.chat.username || null;
     const firstName = update.message.chat.first_name || '';
     const lastName = update.message.chat.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim() || 'Joueur';
+    const fullName = `${firstName} ${lastName}`.trim() || 'لاعب';
 
     const hasPhoto = !!(update.message.photo && update.message.photo.length > 0) || !!update.message.document;
     let screenshotFileId = null;
@@ -108,7 +108,7 @@ export class TelegramProcessor extends WorkerHost {
 
     // Command /start, /offers, /menu or /myclaims
     const lowerText = text.toLowerCase();
-    if (lowerText === '/start' || lowerText === '/offers' || lowerText === 'offres' || lowerText === 'menu') {
+    if (lowerText === '/start' || lowerText === '/offers' || lowerText === 'offres' || lowerText === 'menu' || lowerText === 'عروض' || lowerText === 'القائمة') {
       await this.prisma.telegramConversationState.upsert({
         where: { telegramChatId: chatId },
         create: { telegramChatId: chatId, step: 'IDLE' },
@@ -191,6 +191,54 @@ export class TelegramProcessor extends WorkerHost {
         return;
       }
 
+      // ✅ Guard: ensure this player has NEVER claimed this promo code before (any status)
+      const existingPromoClaimCheck = await this.prisma.playerClaim.findUnique({
+        where: {
+          telegramChatId_promoCodeId: {
+            telegramChatId: chatId,
+            promoCodeId: currentOrder.promoCodeId,
+          },
+        },
+      });
+
+      if (existingPromoClaimCheck) {
+        const statusMap = { PENDING: 'قيد المراجعة ⏳', APPROVED: 'مقبول ✅', REJECTED: 'مرفوض ❌' };
+        const statusAr = statusMap[existingPromoClaimCheck.status] || existingPromoClaimCheck.status;
+        await this.telegramService.sendMessage(
+          chatId,
+          `⚠️ <b>هاد العرض استعملتيه من قبل!</b>\n\nطلبك ديال الكود برومو <code>${currentOrder.promoCode.code}</code> (${currentOrder.promoCode.bookmaker}) مسجل مسبقاً بحالة: <b>${statusAr}</b>.\n\nيمكنك الاستفادة من العروض الأخرى المتاحة!`,
+        );
+        await this.prisma.telegramConversationState.update({
+          where: { telegramChatId: chatId },
+          data: { step: 'IDLE', currentOrderId: null, metadata: null },
+        });
+        await this.sendOffersMenu(chatId, fullName);
+        return;
+      }
+
+
+      const freshOrder = await this.prisma.order.findUnique({
+        where: { id: currentOrder.id },
+        select: { claimedCount: true, targetAccounts: true },
+      });
+
+      if (!freshOrder || freshOrder.claimedCount >= freshOrder.targetAccounts) {
+        // Order is already full — mark it completed and turn the player away
+        await this.prisma.order.update({
+          where: { id: currentOrder.id },
+          data: { status: 'COMPLETED' },
+        });
+        await this.telegramService.sendMessage(
+          chatId,
+          `⚠️ <b>العرض اكتمل للتو!</b>\n\nللأسف، هاد العرض وصل للعدد المطلوب من المشتركين. تابع الشات باش يوصلك إشعار بالعروض الجديدة!`,
+        );
+        await this.prisma.telegramConversationState.update({
+          where: { telegramChatId: chatId },
+          data: { step: 'IDLE', currentOrderId: null, metadata: null },
+        });
+        return;
+      }
+
       // ✅ Create claim immediately in DB (without screenshot yet) so it appears in dashboard
       const newClaim = await this.prisma.playerClaim.create({
         data: {
@@ -205,14 +253,15 @@ export class TelegramProcessor extends WorkerHost {
         },
       });
 
-      // Increment claimed count on campaign order
-      await this.prisma.order.update({
+      // Increment claimed count and get the fresh updated value atomically
+      const updatedOrder = await this.prisma.order.update({
         where: { id: currentOrder.id },
         data: { claimedCount: { increment: 1 } },
+        select: { claimedCount: true, targetAccounts: true },
       });
 
-      // Check target accounts limit
-      if (currentOrder.claimedCount + 1 >= currentOrder.targetAccounts) {
+      // Use the fresh post-increment value — not the stale pre-fetched object
+      if (updatedOrder.claimedCount >= updatedOrder.targetAccounts) {
         await this.prisma.order.update({
           where: { id: currentOrder.id },
           data: { status: 'COMPLETED' },
@@ -239,23 +288,7 @@ export class TelegramProcessor extends WorkerHost {
       const caption = `💬 <b>خطوة أخيرة ومهمة!</b>\n\nشكراً، الأيدي ديالك فـ <b>${bookmakerName}</b> هو <code>${bookmakerAccountId}</code>.\n\nدابا، <b>صيفط ليا سكرين شوت (صورة الشاشة)</b> ديال الحساب ديالك اللي تسجلتي بيه (يكون كايظهر بحال هاد النموذج التوضيحي، فين كايظهر الأيدي والكود برومو <code>${promoCodeName}</code>) باش نأكدو التسجيل ديالك ونفعلوا ليك البونص. 📸`;
 
       try {
-        let photoToSend = path.join(process.cwd(), 'src', 'claims', 'example-screenshot.png');
-
-        if (currentOrder.promoCode?.exampleImageUrl) {
-          const custom = currentOrder.promoCode.exampleImageUrl.trim();
-          if (custom.startsWith('/uploads/') || custom.startsWith('uploads/')) {
-            const rel = custom.replace(/^\//, '');
-            const diskPath = path.join(process.cwd(), rel);
-            if (fs.existsSync(diskPath)) {
-              photoToSend = diskPath;
-            }
-          } else if (fs.existsSync(custom)) {
-            photoToSend = custom;
-          } else {
-            photoToSend = custom;
-          }
-        }
-
+        const photoToSend = this.resolvePromoExamplePhoto(currentOrder.promoCode);
         await this.telegramService.sendPhoto(chatId, photoToSend, caption);
       } catch (err) {
         this.logger.warn(`Could not send photo directly, falling back to text: ${err.message}`);
@@ -329,19 +362,57 @@ export class TelegramProcessor extends WorkerHost {
         data: { step: 'IDLE', currentOrderId: null, metadata: null },
       });
 
-      const inline_keyboard = [
-        [
-          { text: '🎁 Voir d\'autres offres / عرض عروض أخرى', callback_data: 'show_offers' },
-          { text: '📋 Mes demandes / طلباتي', callback_data: 'my_claims' },
-        ],
-      ];
+      const channelUrl = await this.getTelegramChannelUrl(order);
+
+      const inline_keyboard: any[][] = [];
+      if (channelUrl) {
+        inline_keyboard.push([{ text: '📢 رابط القناة لمتابعة العروض الجديدة', url: channelUrl }]);
+      }
+      inline_keyboard.push([
+        { text: '🎁 عرض عروض أخرى', callback_data: 'show_offers' },
+        { text: '📋 طلباتي', callback_data: 'my_claims' },
+      ]);
+
+      const channelNote = channelUrl
+        ? `\n\n📢 <b>البلاصة فين كنعلنو على العروض الجديدة هي هنا :</b>\n👉 ${channelUrl}`
+        : '';
 
       await this.telegramService.sendMessage(
         chatId,
-        `✅ <b>تم تسجيل الطلب بنجاح!</b>\n\nشكراً ليك! صيفطنا المعلومات ديالك للفريق المكلّف. غادي نراجعو الأيدي والسكرين شوت ديالك وغادي نجاوبوك هنا ف أقرب وقت فاش يتفعل البونص ديالك فـ <b>${order.promoCode.bookmaker}</b>. 🚀`,
+        `✅ <b>تم تسجيل الطلب ديالك بنجاح!</b>\n\nشكراً ليك! صيفطنا المعلومات ديالك للفريق المكلّف. غادي نراجعو الأيدي والسكرين شوت ديالك وغادي نجاوبوك هنا ف أقرب وقت فاش يتفعل البونص ديالك فـ <b>${order.promoCode.bookmaker}</b>. 🚀${channelNote}`,
         { inline_keyboard },
       );
     }
+  }
+
+  /**
+   * Helper: Get normalized Telegram Channel URL from order or latest configured order
+   */
+  private async getTelegramChannelUrl(specificOrder?: any): Promise<string | null> {
+    let raw = specificOrder?.telegramChannelUrl;
+    if (!raw) {
+      const latestWithChannel = await this.prisma.order.findFirst({
+        where: {
+          telegramChannelUrl: { not: null },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      raw = latestWithChannel?.telegramChannelUrl;
+    }
+
+    if (!raw || !raw.trim()) {
+      raw = 'https://t.me/MARROCCINHO_FREE_SOLD';
+    }
+
+    let url = raw.trim();
+    if (url.startsWith('@')) {
+      return `https://t.me/${url.substring(1)}`;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      if (url.startsWith('t.me/')) return `https://${url}`;
+      return `https://t.me/${url}`;
+    }
+    return url;
   }
 
   /**
@@ -360,10 +431,11 @@ export class TelegramProcessor extends WorkerHost {
     const userClaims = await this.prisma.playerClaim.findMany({
       where: {
         telegramChatId: chatId,
-        status: { not: 'REJECTED' },
+        // All statuses — once a player touches an offer, they never see it again
       },
       select: { promoCodeId: true },
     });
+
     const claimedPromoCodeIds = new Set(userClaims.map(c => c.promoCodeId));
 
     // Only include active orders that have remaining quota AND haven't been claimed by this player
@@ -371,31 +443,49 @@ export class TelegramProcessor extends WorkerHost {
       o => o.claimedCount < o.targetAccounts && !claimedPromoCodeIds.has(o.promoCodeId),
     );
 
+    const channelUrl = await this.getTelegramChannelUrl(availableOrders[0] || activeOrders[0]);
+
     if (availableOrders.length === 0) {
       const hasAnyClaims = userClaims.length > 0;
       const text = hasAnyClaims
-        ? `🎉 <b>تبارك الله عليك ${fullName}!</b>\n\nراك ديجا تستافدتي من كاع العروض المتوفرة حالياً. خليك متبع الشات باش يوصلك الجديد فاش نطلقو عروض جديدة!`
-        : `ℹ️ <b>مرحباً بك ${fullName}!</b>\n\nحالياً ماكاين حتى شي عرض ديال البونص أو الديبو فابور. خليك متبع الشات باش يوصلك الجديد فاش نطلقو العرض الجاي!`;
+        ? `🎉 <b>تبارك الله عليك ${fullName}!</b>\n\nراك ديجا تستافدتي من كاع العروض المتوفرة حالياً.\n\n📢 <b>البلاصة فين كنعلنو على العروض الجديدة هي هنا :</b>\n👉 ${channelUrl}`
+        : `ℹ️ <b>مرحباً بك ${fullName}!</b>\n\nحالياً ماكاين حتى شي عرض ديال البونص أو الديبو فابور.\n\n📢 <b>البلاصة فين كنعلنو على العروض الجديدة هي هنا :</b>\n👉 ${channelUrl}`;
 
-      const inline_keyboard = [
-        [{ text: '📋 حالة طلباتي / Mes Demandes', callback_data: 'my_claims' }],
-      ];
+      const inline_keyboard: any[][] = [];
+      if (channelUrl) {
+        inline_keyboard.push([{ text: '📢 رابط القناة لمتابعة العروض الجديدة', url: channelUrl }]);
+      }
+      inline_keyboard.push([{ text: '📋 حالة طلباتي', callback_data: 'my_claims' }]);
+
       await this.telegramService.sendMessage(chatId, text, { inline_keyboard });
       return;
     }
 
-    const inline_keyboard: any[] = availableOrders.map(order => [
-      {
-        text: `🎁 ${order.promoCode.bookmaker.toUpperCase()} — (Code: ${order.promoCode.code})`,
-        callback_data: `select_order_${order.id}`,
-      },
-    ]);
+    const inline_keyboard: any[][] = [];
+
+    if (channelUrl) {
+      inline_keyboard.push([
+        { text: '📢 رابط القناة لمتابعة العروض الجديدة', url: channelUrl },
+      ]);
+    }
+
+    availableOrders.forEach(order => {
+      inline_keyboard.push([
+        {
+          text: `🎁 ${order.promoCode.bookmaker.toUpperCase()} — (كود: ${order.promoCode.code})`,
+          callback_data: `select_order_${order.id}`,
+        },
+      ]);
+    });
 
     inline_keyboard.push([
-      { text: '📋 حالة طلباتي / Mes Demandes', callback_data: 'my_claims' },
+      { text: '📋 حالة طلباتي', callback_data: 'my_claims' },
     ]);
 
-    const text = `🎁 <b>عروض البونص والديبو فابور المتوفرة :</b>\n\nأهلاً بك <b>${fullName}</b>!\nاختر العرض اللي بغيتي تستافد منو بالضغط على الزر أسفله :`;
+    let text = `🎁 <b>عروض البونص والديبو فابور المتوفرة :</b>\n\nأهلاً بك <b>${fullName}</b>!\nاختر العرض اللي بغيتي تستافد منو بالضغط على الزر أسفله :`;
+    if (channelUrl) {
+      text += `\n\n📢 <b>البلاصة فين كنعلنو على العروض الجديدة هي هنا :</b>\n👉 ${channelUrl}`;
+    }
 
     await this.telegramService.sendMessage(chatId, text, { inline_keyboard });
   }
@@ -413,7 +503,7 @@ export class TelegramProcessor extends WorkerHost {
     if (claims.length === 0) {
       const text = `📋 <b>ما عندك حتى شي طلب ديجا تسجل!</b>\n\nأهلاً ${fullName}، مزال ما شاركتي ف حتى شي عرض. اضغط على الزر أسفله باش تشوف العروض المتوفرة.`;
       const inline_keyboard = [
-        [{ text: '🎁 عرض العروض المتوفرة / Voir les offres', callback_data: 'show_offers' }],
+        [{ text: '🎁 عرض العروض المتوفرة', callback_data: 'show_offers' }],
       ];
       await this.telegramService.sendMessage(chatId, text, { inline_keyboard });
       return;
@@ -428,14 +518,21 @@ export class TelegramProcessor extends WorkerHost {
     let message = `📋 <b>حالة الطلبات ديالك (${claims.length}) :</b>\n\n`;
     claims.forEach((claim, idx) => {
       const statusAr = statusMap[claim.status] || claim.status;
-      message += `${idx + 1}️⃣ <b>${claim.promoCode.bookmaker}</b> (Code: <code>${claim.promoCode.code}</code>)\n`;
-      message += `   • ID: <code>${claim.playerBookmakerId || 'N/A'}</code>\n`;
+      message += `${idx + 1}️⃣ <b>${claim.promoCode.bookmaker}</b> (كود: <code>${claim.promoCode.code}</code>)\n`;
+      message += `   • الأيدي (ID): <code>${claim.playerBookmakerId || 'غير متوفر'}</code>\n`;
       message += `   • الحالة: <b>${statusAr}</b>\n\n`;
     });
 
-    const inline_keyboard = [
-      [{ text: '🎁 Voir d\'autres offres / عرض عروض أخرى', callback_data: 'show_offers' }],
-    ];
+    const channelUrl = await this.getTelegramChannelUrl();
+    const inline_keyboard: any[][] = [];
+    if (channelUrl) {
+      inline_keyboard.push([{ text: '📢 رابط القناة لمتابعة العروض الجديدة', url: channelUrl }]);
+    }
+    inline_keyboard.push([{ text: '🎁 عرض عروض أخرى', callback_data: 'show_offers' }]);
+
+    if (channelUrl) {
+      message += `📢 <b>البلاصة فين كنعلنو على العروض الجديدة هي هنا :</b>\n👉 ${channelUrl}\n`;
+    }
 
     await this.telegramService.sendMessage(chatId, message, { inline_keyboard });
   }
@@ -458,6 +555,8 @@ export class TelegramProcessor extends WorkerHost {
       return;
     }
 
+    const channelUrl = await this.getTelegramChannelUrl(order);
+
     // Check if player has already claimed this specific promo code
     const existingClaim = await this.prisma.playerClaim.findUnique({
       where: {
@@ -469,31 +568,26 @@ export class TelegramProcessor extends WorkerHost {
     });
 
     if (existingClaim) {
-      if (existingClaim.status === 'REJECTED') {
-        // Delete old rejected claim record so player can resubmit cleanly!
-        await this.prisma.playerClaim.delete({
-          where: { id: existingClaim.id },
-        });
-      } else {
-        const statusMap = {
-          PENDING: 'قيد المراجعة ⏳',
-          APPROVED: 'مقبول ✅',
-          REJECTED: 'مرفوض ❌',
-        };
-        const statusAr = statusMap[existingClaim.status] || existingClaim.status;
-        const inline_keyboard = [
-          [
-            { text: '🎁 Voir d\'autres offres / عروض أخرى', callback_data: 'show_offers' },
-            { text: '📋 Mes demandes / طلباتي', callback_data: 'my_claims' },
-          ],
-        ];
-        await this.telegramService.sendMessage(
-          chatId,
-          `⚠️ <b>هاد العرض مستعمل ديجا!</b>\n\nأهلاً ${fullName}، راك ديجا شاركتي فهاد العرض ديال الكود برومو <code>${order.promoCode.code}</code> (${order.promoCode.bookmaker}).\n\n<i>حالة الطلب ديالك دابا هي:</i> <b>${statusAr}</b>.`,
-          { inline_keyboard },
-        );
-        return;
+      const statusMap = {
+        PENDING: 'قيد المراجعة ⏳',
+        APPROVED: 'مقبول ✅',
+        REJECTED: 'مرفوض ❌',
+      };
+      const statusAr = statusMap[existingClaim.status] || existingClaim.status;
+      const inline_keyboard: any[][] = [];
+      if (channelUrl) {
+        inline_keyboard.push([{ text: '📢 انضم لقناتنا على التيليجرام', url: channelUrl }]);
       }
+      inline_keyboard.push([
+        { text: '🎁 عرض عروض أخرى', callback_data: 'show_offers' },
+        { text: '📋 طلباتي', callback_data: 'my_claims' },
+      ]);
+      await this.telegramService.sendMessage(
+        chatId,
+        `⚠️ <b>هاد العرض مستعمل ديجا!</b>\n\nأهلاً ${fullName}، راك ديجا شاركتي فهاد العرض ديال الكود برومو <code>${order.promoCode.code}</code> (${order.promoCode.bookmaker}).\n\n<i>حالة الطلب ديالك:</i> <b>${statusAr}</b>. يمكنك اختيار عرض آخر.`,
+        { inline_keyboard },
+      );
+      return;
     }
 
     // Set conversation step for this order
@@ -521,5 +615,49 @@ export class TelegramProcessor extends WorkerHost {
       `👉 <b>صيفط ليا دابا الأيدي (ID)</b> ديال الحساب ديالك اللي تسجلتي بيه فـ ${order.promoCode.bookmaker} باش نتحققوا منو (يتكون من 10 أرقام).`;
 
     await this.telegramService.sendMessage(chatId, messageContent);
+  }
+
+  /**
+   * Helper: Resolve the promo code tutorial/example screenshot file path on disk
+   */
+  private resolvePromoExamplePhoto(promoCode?: any): string {
+    const defaultFallback = path.join(__dirname, '..', 'claims', 'example-screenshot.png');
+    const rootFallback = path.join(process.cwd(), 'src', 'claims', 'example-screenshot.png');
+    const defaultPath = fs.existsSync(defaultFallback)
+      ? defaultFallback
+      : (fs.existsSync(rootFallback) ? rootFallback : path.join(process.cwd(), 'backend', 'src', 'claims', 'example-screenshot.png'));
+
+    if (!promoCode?.exampleImageUrl || !promoCode.exampleImageUrl.trim()) {
+      return defaultPath;
+    }
+
+    const raw = promoCode.exampleImageUrl.trim();
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+
+    const rel = raw.replace(/^\//, '');
+    const baseName = path.basename(raw);
+    const candidates = [
+      raw,
+      path.join(process.cwd(), rel),
+      path.join(process.cwd(), 'backend', rel),
+      path.join(process.cwd(), 'uploads', baseName),
+      path.join(process.cwd(), 'backend', 'uploads', baseName),
+      path.join(__dirname, '..', '..', rel),
+      path.join(__dirname, '..', '..', 'uploads', baseName),
+      path.join(__dirname, '..', '..', '..', 'uploads', baseName),
+      path.join(__dirname, '..', '..', '..', 'backend', 'uploads', baseName),
+    ];
+
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        this.logger.log(`Found custom promo image for ${promoCode.code} at: ${cand}`);
+        return cand;
+      }
+    }
+
+    this.logger.warn(`Could not find custom image "${raw}" on disk for ${promoCode.code}, using default`);
+    return defaultPath;
   }
 }

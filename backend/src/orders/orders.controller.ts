@@ -11,7 +11,7 @@ export class OrdersController {
   }
 
   @Post()
-  async create(@Body() body: { promoCodeId: string; targetAccounts: number; freeDepositConditions: string }) {
+  async create(@Body() body: { promoCodeId: string; targetAccounts: number; freeDepositConditions: string; telegramChannelUrl?: string }) {
     return this.ordersService.create(body);
   }
 

@@ -29,13 +29,39 @@ export class PromoCodesController {
     return this.promoCodesService.findAll();
   }
 
+  @Get('detailed')
+  async getAllDetailed() {
+    return this.promoCodesService.findAllDetailed();
+  }
+
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage }))
-  uploadExampleImage(@UploadedFile() file: any) {
+  async uploadExampleImage(@UploadedFile() file: any) {
     if (!file) {
       throw new Error('No file uploaded');
     }
-    return { url: `/uploads/${file.filename}` };
+
+    try {
+      // Automatically optimize & compress the image with sharp to stay well under Telegram's 10MB limit
+      const sharp = require('sharp');
+      const optimizedFilename = `opt-${file.filename}`;
+      const optimizedPath = path.join(process.cwd(), 'uploads', optimizedFilename);
+
+      await sharp(file.path)
+        .resize({ width: 1600, withoutEnlargement: true })
+        .png({ quality: 80, compressionLevel: 8 })
+        .toFile(optimizedPath);
+
+      // Remove the original uncompressed heavy file if different
+      try {
+        fs.unlinkSync(file.path);
+      } catch (e) {}
+
+      return { url: `/uploads/${optimizedFilename}` };
+    } catch (err) {
+      // If sharp fails for any reason, return the raw uploaded file
+      return { url: `/uploads/${file.filename}` };
+    }
   }
 
   @Post()

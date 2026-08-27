@@ -16,6 +16,32 @@ export class PromoCodesService {
     });
   }
 
+  async findAllDetailed() {
+    return this.prisma.promoCode.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        orders: {
+          orderBy: { createdAt: 'desc' },
+        },
+        claims: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            telegramChatId: true,
+            telegramUsername: true,
+            telegramName: true,
+            playerBookmakerId: true,
+            status: true,
+            createdAt: true,
+          },
+        },
+        _count: {
+          select: { orders: true, claims: true },
+        },
+      },
+    });
+  }
+
   async create(data: { code: string; bookmaker: string; exampleImageUrl?: string }) {
     const existing = await this.prisma.promoCode.findUnique({
       where: { code: data.code.trim().toUpperCase() },

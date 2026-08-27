@@ -45,7 +45,28 @@ export interface PromoCodeItem {
   bookmaker: string;
   exampleImageUrl?: string | null;
   isActive: boolean;
+  createdAt?: string;
   _count?: { orders: number; claims: number };
+}
+
+export interface DetailedPromoCodeItem extends PromoCodeItem {
+  orders: {
+    id: string;
+    targetAccounts: number;
+    claimedCount: number;
+    freeDepositConditions: string;
+    status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+    createdAt: string;
+  }[];
+  claims: {
+    id: string;
+    telegramChatId: string;
+    telegramUsername: string | null;
+    telegramName: string | null;
+    playerBookmakerId: string | null;
+    status: 'APPROVED' | 'PENDING' | 'REJECTED';
+    createdAt: string;
+  }[];
 }
 
 export interface CampaignOrder {
@@ -55,6 +76,7 @@ export interface CampaignOrder {
   targetAccounts: number;
   claimedCount: number;
   freeDepositConditions: string;
+  telegramChannelUrl?: string | null;
   status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
   createdAt: string;
 }
@@ -72,9 +94,74 @@ export interface PlayerClaimItem {
   createdAt: string;
 }
 
+export interface PlayerStatsItem {
+  telegramChatId: string;
+  telegramUsername: string | null;
+  telegramName: string | null;
+  consumedCount: number;
+  promoCodes: {
+    code: string;
+    bookmaker: string;
+    playerBookmakerId: string | null;
+    status: string;
+    createdAt: string;
+  }[];
+  lastActivity: string;
+}
+
+export interface DatabaseStats {
+  timestamp: string;
+  database: string;
+  overview: {
+    totalUsers: number;
+    totalPromoCodes: number;
+    activePromoCodes: number;
+    totalOrders: number;
+    totalTargetAccounts: number;
+    totalClaimedAccounts: number;
+    fulfillmentRate: number;
+    totalClaims: number;
+    pendingClaims: number;
+    approvedClaims: number;
+    rejectedClaims: number;
+    approvalRate: number;
+    uniquePlayersWithClaims: number;
+    totalKnownUserIds: number;
+    totalTelegramStates: number;
+    totalJobLogs: number;
+  };
+  players: PlayerStatsItem[];
+  bookmakers: {
+    bookmaker: string;
+    total: number;
+    active: number;
+  }[];
+  ordersByStatus: {
+    ACTIVE: number;
+    COMPLETED: number;
+    PAUSED: number;
+    PENDING: number;
+  };
+  claimsByStatus: {
+    PENDING: number;
+    APPROVED: number;
+    REJECTED: number;
+  };
+  jobsByStatus: {
+    SUCCESS: number;
+    FAILED: number;
+    PENDING: number;
+  };
+  telegramSteps: Record<string, number>;
+}
+
 export const api = {
+  // Stats
+  getDatabaseStats: () => apiFetch<DatabaseStats>('/stats'),
+
   // Promo codes
   getPromoCodes: () => apiFetch<PromoCodeItem[]>('/promocodes'),
+  getPromoCodesDetailed: () => apiFetch<DetailedPromoCodeItem[]>('/promocodes/detailed'),
   createPromoCode: (data: { code: string; bookmaker: string; exampleImageUrl?: string }) => 
     apiFetch<PromoCodeItem>('/promocodes', { method: 'POST', data }),
   updatePromoCodeImage: (id: string, exampleImageUrl: string) =>
@@ -97,7 +184,7 @@ export const api = {
 
   // Orders
   getOrders: () => apiFetch<CampaignOrder[]>('/orders'),
-  createOrder: (data: { promoCodeId: string; targetAccounts: number; freeDepositConditions: string }) => 
+  createOrder: (data: { promoCodeId: string; targetAccounts: number; freeDepositConditions: string; telegramChannelUrl?: string }) => 
     apiFetch<CampaignOrder>('/orders', { method: 'POST', data }),
   updateOrderStatus: (id: string, status: 'ACTIVE' | 'PAUSED' | 'COMPLETED') => 
     apiFetch<CampaignOrder>(`/orders/${id}/status`, { method: 'PATCH', data: { status } }),
@@ -119,4 +206,28 @@ export const api = {
     apiFetch<PlayerClaimItem>(`/claims/${id}/status`, { method: 'PATCH', data: { status, ...(reason ? { reason } : {}) } }),
   deleteClaim: (id: string) =>
     apiFetch(`/claims/${id}`, { method: 'DELETE' }),
+  deleteUserClaims: (telegramChatId: string, promoCodeId?: string) =>
+    promoCodeId 
+      ? apiFetch(`/claims/user/${telegramChatId}/promo/${promoCodeId}`, { method: 'DELETE' })
+      : apiFetch(`/claims/user/${telegramChatId}`, { method: 'DELETE' }),
+  bulkAddConsumptions: (data: { promoCodeId: string; userInputs: string; status?: 'APPROVED' | 'PENDING' | 'REJECTED' }) =>
+    apiFetch<{ success: boolean; addedCount: number; skippedCount: number; message: string }>('/claims/bulk', { method: 'POST', data }),
+  sendTelegramMessage: (chatId: string, text: string) =>
+    apiFetch('/telegram/send-message', { method: 'POST', data: { chatId, text } }),
+
+  // Database Backup
+  downloadBackup: async () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const res = await fetch(`${API_BASE_URL}/backup`);
+    if (!res.ok) throw new Error('Échec du téléchargement de la sauvegarde');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `database-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };

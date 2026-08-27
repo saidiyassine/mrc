@@ -95,6 +95,28 @@ export class ClaimsController {
     return this.claimsService.updateStatus(id, body.status, body.reason);
   }
 
+  @Post('bulk')
+  async bulkAddConsumptions(@Body() body: {
+    promoCodeId: string;
+    userInputs: string;
+    status?: 'APPROVED' | 'PENDING' | 'REJECTED';
+  }) {
+    return this.claimsService.bulkAddConsumptions(body);
+  }
+
+  @Delete('user/:telegramChatId')
+  async deleteAllUserClaims(@Param('telegramChatId') telegramChatId: string) {
+    return this.claimsService.deleteUserClaims(telegramChatId);
+  }
+
+  @Delete('user/:telegramChatId/promo/:promoCodeId')
+  async deleteUserClaimByPromo(
+    @Param('telegramChatId') telegramChatId: string,
+    @Param('promoCodeId') promoCodeId: string,
+  ) {
+    return this.claimsService.deleteUserClaims(telegramChatId, promoCodeId);
+  }
+
   @Delete(':id')
   async deleteClaim(@Param('id') id: string) {
     return this.claimsService.deleteClaim(id);

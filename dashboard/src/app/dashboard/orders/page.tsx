@@ -10,6 +10,7 @@ export default function OrdersPage() {
   const [selectedPromoId, setSelectedPromoId] = useState('');
   const [targetAccounts, setTargetAccounts] = useState<number>(20);
   const [conditions, setConditions] = useState('Inscrivez-vous avec le code promo et répondez avec votre ID joueur.');
+  const [telegramChannelUrl, setTelegramChannelUrl] = useState('https://t.me/MARROCCINHO_FREE_SOLD');
   const [isLaunching, setIsLaunching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +55,10 @@ export default function OrdersPage() {
         promoCodeId: selectedPromoId,
         targetAccounts: Number(targetAccounts),
         freeDepositConditions: conditions,
+        telegramChannelUrl: telegramChannelUrl.trim() || undefined,
       });
       setOrders([newOrder, ...orders]);
+      setTelegramChannelUrl('');
       const promo = promos.find(p => p.id === selectedPromoId);
       showSuccess(`🚀 Ordre lancé ! Le bot attend ${targetAccounts} joueurs pour le code "${promo?.code}".`);
     } catch (err: any) {
@@ -175,11 +178,26 @@ export default function OrdersPage() {
                   <div style={{
                     background: 'var(--bg-tertiary)', padding: '0.85rem 1rem',
                     borderRadius: 'var(--radius-md)', fontSize: '0.85rem',
-                    color: 'var(--text-secondary)', marginBottom: '1.25rem',
+                    color: 'var(--text-secondary)', marginBottom: '0.75rem',
                     borderLeft: '3px solid var(--accent-primary)'
                   }}>
                     <strong>Conditions :</strong> {order.freeDepositConditions}
                   </div>
+
+                  {order.telegramChannelUrl && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)',
+                      borderRadius: 'var(--radius-md)', padding: '0.6rem 0.85rem',
+                      fontSize: '0.82rem', color: '#7dd3fc', marginBottom: '1.25rem'
+                    }}>
+                      <span>📢</span>
+                      <strong>Canal Telegram recommandé :</strong>
+                      <a href={order.telegramChannelUrl} target="_blank" rel="noreferrer" style={{ color: '#38bdf8', textDecoration: 'underline', fontWeight: 600 }}>
+                        {order.telegramChannelUrl}
+                      </a>
+                    </div>
+                  )}
 
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
@@ -247,6 +265,64 @@ export default function OrdersPage() {
                 onChange={(e) => setTargetAccounts(Number(e.target.value))}
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="telegram-channel-input" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📢 Lien du Canal Telegram</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', fontWeight: 600 }}>Recommandé aux joueurs</span>
+              </label>
+
+              {/* Quick Choice Presets */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setTelegramChannelUrl('https://t.me/MARROCCINHO_FREE_SOLD')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                    background: telegramChannelUrl === 'https://t.me/MARROCCINHO_FREE_SOLD' ? 'rgba(56, 189, 248, 0.2)' : 'var(--bg-tertiary)',
+                    border: `1px solid ${telegramChannelUrl === 'https://t.me/MARROCCINHO_FREE_SOLD' ? 'var(--accent-secondary)' : 'var(--border-color)'}`,
+                    color: telegramChannelUrl === 'https://t.me/MARROCCINHO_FREE_SOLD' ? 'var(--accent-secondary)' : 'var(--text-secondary)',
+                    borderRadius: '999px', padding: '0.35rem 0.85rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease'
+                  }}
+                  title="Sélectionner https://t.me/MARROCCINHO_FREE_SOLD"
+                >
+                  ⭐ MARROCCINHO FREE SOLD
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTelegramChannelUrl('https://t.me/atlasfreesold')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                    background: telegramChannelUrl === 'https://t.me/atlasfreesold' ? 'rgba(56, 189, 248, 0.2)' : 'var(--bg-tertiary)',
+                    border: `1px solid ${telegramChannelUrl === 'https://t.me/atlasfreesold' ? 'var(--accent-secondary)' : 'var(--border-color)'}`,
+                    color: telegramChannelUrl === 'https://t.me/atlasfreesold' ? 'var(--accent-secondary)' : 'var(--text-secondary)',
+                    borderRadius: '999px', padding: '0.35rem 0.85rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease'
+                  }}
+                  title="Sélectionner https://t.me/atlasfreesold"
+                >
+                  ⭐ ATLAS FREE SOLD
+                </button>
+              </div>
+
+              <input
+                id="telegram-channel-input"
+                list="channels-datalist"
+                type="text"
+                className="form-input"
+                placeholder="Ex: https://t.me/MARROCCINHO_FREE_SOLD ou https://t.me/atlasfreesold"
+                value={telegramChannelUrl}
+                onChange={(e) => setTelegramChannelUrl(e.target.value)}
+              />
+              <datalist id="channels-datalist">
+                <option value="https://t.me/MARROCCINHO_FREE_SOLD">MARROCCINHO FREE SOLD (Recommandé)</option>
+                <option value="https://t.me/atlasfreesold">ATLAS FREE SOLD (Recommandé)</option>
+              </datalist>
+
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
+                Le bot recommandera ce canal à chaque message pour que le joueur reste abonné aux futures annonces.
+              </span>
             </div>
 
             <div className="form-group">
