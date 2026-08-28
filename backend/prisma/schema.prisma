@@ -53,8 +53,8 @@ model PlayerClaim {
   telegramName    String?
   promoCodeId     String
   promoCode       PromoCode @relation(fields: [promoCodeId], references: [id])
-  orderId         String
-  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId           String?
+  order             Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
   playerBookmakerId String?  // e.g. "ID: 4892019" submitted by player
   screenshotUrl   String?   // optional proof image
   status          String    @default("PENDING") // PENDING, APPROVED, REJECTED

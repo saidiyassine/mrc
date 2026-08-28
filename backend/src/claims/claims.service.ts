@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class ClaimsService {
@@ -8,6 +10,29 @@ export class ClaimsService {
     private readonly prisma: PrismaService,
     private readonly telegramService: TelegramService,
   ) {}
+
+  private deleteScreenshotFromDisk(screenshotUrl?: string | null) {
+    if (!screenshotUrl || screenshotUrl === 'simulated_screenshot' || screenshotUrl === 'telegram_file_uploaded') {
+      return;
+    }
+    try {
+      const rawId = screenshotUrl.replace(/^\/claims\/screenshot\//, '').replace(/^\/uploads\/screenshots\//, '').replace(/^\//, '');
+      const ext = path.extname(rawId);
+      const fileId = ext ? rawId.slice(0, -ext.length) : rawId;
+      const screenshotsDir = path.join(process.cwd(), 'uploads', 'screenshots');
+
+      for (const name of [rawId, fileId, `${fileId}.jpg`, `${fileId}.jpeg`, `${fileId}.png`, `${fileId}.webp`]) {
+        const p = path.join(screenshotsDir, name);
+        if (fs.existsSync(p)) {
+          try {
+            fs.unlinkSync(p);
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting screenshot file from disk:', err);
+    }
+  }
 
   async create(data: {
     telegramChatId: string;
@@ -102,11 +127,11 @@ export class ClaimsService {
         );
       } else {
         // Decrement claimedCount on campaign order to free up quota
-        if (claim.order && claim.order.claimedCount > 0) {
+        if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
           await this.prisma.order.update({
             where: { id: claim.orderId },
             data: { claimedCount: { decrement: 1 } },
-          });
+          }).catch(() => {});
         }
 
         const inline_keyboard = [
@@ -144,11 +169,16 @@ export class ClaimsService {
 
     if (!claim) throw new Error('Demande introuvable');
 
+    // Delete screenshot image from disk to save storage
+    if (claim.screenshotUrl) {
+      this.deleteScreenshotFromDisk(claim.screenshotUrl);
+    }
+
     // Delete the claim record
     await this.prisma.playerClaim.delete({ where: { id } });
 
-    // Free up order quota
-    if (claim.order && claim.order.claimedCount > 0) {
+    // Free up order quota if order exists
+    if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
       await this.prisma.order.update({
         where: { id: claim.orderId },
         data: { claimedCount: { decrement: 1 } },
@@ -325,8 +355,11 @@ export class ClaimsService {
     }
 
     for (const claim of claimsToDelete) {
+      if (claim.screenshotUrl) {
+        this.deleteScreenshotFromDisk(claim.screenshotUrl);
+      }
       await this.prisma.playerClaim.delete({ where: { id: claim.id } });
-      if (claim.order && claim.order.claimedCount > 0) {
+      if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
         await this.prisma.order.update({
           where: { id: claim.orderId },
           data: { claimedCount: { decrement: 1 } },
