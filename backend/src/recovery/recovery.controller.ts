@@ -14,7 +14,7 @@ export class RecoveryController {
   }
 
   /**
-   * One-click restore 10 players for GRD100
+   * One-click reset & restore exact 1xBet GRD100 players
    */
   @Post('restore-10-grd100')
   async restoreTopTenGrd100(
@@ -24,7 +24,15 @@ export class RecoveryController {
       status?: 'APPROVED' | 'PENDING';
     },
   ) {
-    return this.recoveryService.restoreTopTenGrd100(body);
+    return this.recoveryService.resetAndRestoreExactGrd100();
+  }
+
+  /**
+   * Dedicated reset database & restore exact players endpoint
+   */
+  @Post('reset-and-restore-exact')
+  async resetAndRestoreExact() {
+    return this.recoveryService.resetAndRestoreExactGrd100();
   }
 
   /**

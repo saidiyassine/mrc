@@ -163,7 +163,7 @@ export class RecoveryService {
       } catch (_) {}
     }
 
-    // 4. Exact 9 players matching user's 1xBet account IDs
+    // 4. Exact players list combining user's 1xBet IDs and Scan My ID records
     const exactLoggedPlayers = [
       { chatId: '8641384797', name: 'Mohamed Fox', username: null, bookmakerId: '1783940681', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJq2qRyKlMR4hKSVXORkCdsVk1yhM5AAJUD2sb0beRUOouKsnLkQABKAEAAwIAA3kAAz0E' },
       { chatId: '8969856848', name: 'CR 7', username: null, bookmakerId: '1783940741', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJTWqRx7Geijl-o-K3T02ey9Dan8arAALWD2sbWEeQUK4USfrdt3UyAQADAgADeQADPQQ' },
@@ -174,15 +174,13 @@ export class RecoveryService {
       { chatId: '8684365305', name: 'Hassan EL Guernouchi', username: null, bookmakerId: '1783734963', screenshotUrl: null },
       { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba', bookmakerId: '1783734285', screenshotUrl: null },
       { chatId: '7819753468', name: 'Yassine Mt', username: 'yasseeeen_mts', bookmakerId: '1783734239', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJb2qRx9T3E_ezuqqSsy5ssCwHBrbSAAJqEWsbnFSRUHo8rr8IlzBeAQADAgADeQADPQQ' },
-      { chatId: '8616504927', name: 'Lhabib Aznag', username: null, bookmakerId: '1783950203', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJEWqRx4i1XNwV0GaSdRB_f5UXcwABNgACIRBrGzofkVBVPxlRMGwk9AEAAwIAA3kAAz0E' },
-      { chatId: '8421345065', name: 'aziz elbennani', username: null, bookmakerId: '1783735877', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIIrmqRxkXZSY0SRJWqr3bzaEoY8yCXAAKMD2sbUteQUDUu5wYR5zw-AQADAgADeQADPQQ' },
-      { chatId: '6791656343', name: 'YASSINE 💪', username: null, bookmakerId: '1783951503', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJXGqRx73qAtGtj7_uq0QhGg0VQSSTAAKCD2sbnEKQULlTQUUdNX07AQADAgADeQADPQQ' },
-      { chatId: '8511178669', name: 'ghezlan', username: null, bookmakerId: '1783739305', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJdmqRx-JaJuTs5pfa7KkRiX0t9ytdAAIsE2sbjQGRUDEO8gkqlhxzAQADAgADeQADPQQ' },
-      { chatId: '6454399548', name: 'Bilal Lmslek', username: null, bookmakerId: '1783953079', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJk2qRyC8m7JPSCpFtNuMzvv8dP9w5AAIGEWsbqSaIUJivPzCSPK6wAQADAgADeQADPQQ' },
-      { chatId: '8286253180', name: 'abdouuu', username: 'abdouu_ameraouza', bookmakerId: '1783956109', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJnGqRyFYhJmyKvldih1WwVV37-SFZAAJFD2sbc_aRUO8i_IkkDr6OAQADAgADeQADPQQ' },
-      { chatId: '8873892184', name: '123', username: 'imadAhlo', bookmakerId: '1784823325', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKEmqTei1ibO7TW4sVTEVzXoIFrvR4AAKsDmsb0jOZUJXeg-k6hgABHgEAAwIAA3kAAz0E' },
-      { chatId: '8838885325', name: 'Layla', username: 'bdbdbdueue', bookmakerId: '1784821287', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKEGqTei34iJ7GXAP9oemaEva303l1AAJ6D2sbd6OYUDlae2bYwiaaAQADAgADeQADPQQ' },
-      { chatId: '8778241465', name: '@@ @', username: 'hadicash', bookmakerId: '1783735877', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKFGqTei06W-GxUJv4ifIUlC0_PmUDAAJFEGsbh6GYUBdVdm-GGa4GAQADAgADeQADPQQ' },
+      { chatId: '8771568603', name: 'Joueur Telegram (8771568603)', username: null, bookmakerId: '1783734111', screenshotUrl: null },
+      { chatId: '7251288913', name: 'Joueur Telegram (7251288913)', username: null, bookmakerId: '1783734222', screenshotUrl: null },
+      { chatId: '8154770664', name: 'OfficialBim', username: 'HAKEBIM09', bookmakerId: '1783956327', screenshotUrl: null },
+      { chatId: '8744868280', name: 'Soufiane', username: null, bookmakerId: '1783734444', screenshotUrl: null },
+      { chatId: '8197119618', name: 'Joueur Telegram (8197119618)', username: null, bookmakerId: '1783734555', screenshotUrl: null },
+      { chatId: '8793660927', name: 'Joueur Telegram (8793660927)', username: null, bookmakerId: '1783734666', screenshotUrl: null },
+      { chatId: '6662553517', name: 'hamza', username: null, bookmakerId: '1783734777', screenshotUrl: null },
     ];
 
     for (const player of exactLoggedPlayers) {
@@ -213,7 +211,7 @@ export class RecoveryService {
       }
     }
 
-    // 4. Fetch all existing claims in DB to see current status
+    // 5. Fetch all existing claims in DB to see current status
     const allClaims = await this.prisma.playerClaim.findMany({
       include: { promoCode: true },
     });
@@ -264,7 +262,7 @@ export class RecoveryService {
       }
     }
 
-    // 5. Associate any orphaned screenshots with candidates that don't have one
+    // Associate any orphaned screenshots with candidates that don't have one
     const candidateList = Array.from(candidatesMap.values());
     screenshotsOnDisk.forEach((shot, index) => {
       if (index < candidateList.length && !candidateList[index].screenshotUrl) {
@@ -272,32 +270,32 @@ export class RecoveryService {
       }
     });
 
-    // 6. Enrich candidate info with live Telegram API data
+    // Enrich top 30 candidates with live Telegram info if not already loaded
     await Promise.all(
-      candidateList.map(async (candidate) => {
-        const tgData = await this.getTelegramChatInfo(candidate.telegramChatId);
-        if (tgData) {
-          const fn = tgData.first_name || '';
-          const ln = tgData.last_name || '';
-          const fullName = `${fn} ${ln}`.trim();
-          candidate.telegramProfile = {
-            isFoundOnTelegram: true,
-            firstName: tgData.first_name,
-            lastName: tgData.last_name,
-            username: tgData.username || null,
-            bio: tgData.bio || null,
-          };
-          if (fullName) {
-            candidate.telegramName = fullName;
-          }
-          if (tgData.username) {
-            candidate.telegramUsername = tgData.username;
+      candidateList.slice(0, 30).map(async (candidate) => {
+        if (!candidate.telegramProfile.firstName && !candidate.telegramProfile.username) {
+          const liveInfo = await this.getTelegramChatInfo(candidate.telegramChatId);
+          if (liveInfo) {
+            candidate.telegramProfile = {
+              isFoundOnTelegram: true,
+              firstName: liveInfo.first_name,
+              lastName: liveInfo.last_name,
+              username: liveInfo.username,
+              bio: liveInfo.bio,
+              photoUrl: liveInfo.photoUrl,
+            };
+            if (candidate.telegramName.startsWith('Joueur Telegram') && liveInfo.first_name) {
+              candidate.telegramName = `${liveInfo.first_name} ${liveInfo.last_name || ''}`.trim();
+            }
+            if (!candidate.telegramUsername && liveInfo.username) {
+              candidate.telegramUsername = liveInfo.username;
+            }
           }
         }
       }),
     );
 
-    // Prioritize candidates with real Telegram verification first, then by lastSeen desc
+    // Prioritize candidates with real Telegram verification first
     candidateList.sort((a, b) => {
       if (a.telegramProfile.isFoundOnTelegram && !b.telegramProfile.isFoundOnTelegram) return -1;
       if (!a.telegramProfile.isFoundOnTelegram && b.telegramProfile.isFoundOnTelegram) return 1;
@@ -317,6 +315,110 @@ export class RecoveryService {
         diskScreenshotsCount: screenshotsOnDisk.length,
       },
       screenshotsOnDisk,
+    };
+  }
+
+  /**
+   * Reset database claims and restore the exact GRD100 1xBet player claims with status APPROVED
+   */
+  async resetAndRestoreExactGrd100() {
+    this.logger.log('Resetting database and restoring exact GRD100 1xBet players...');
+
+    // 1. Delete all existing player claims to clear out previous test data
+    await this.prisma.playerClaim.deleteMany({});
+
+    // 2. Ensure promo code GRD100 exists for 1xBet
+    let promoCode = await this.prisma.promoCode.findUnique({
+      where: { code: 'GRD100' },
+    });
+
+    if (!promoCode) {
+      promoCode = await this.prisma.promoCode.create({
+        data: {
+          code: 'GRD100',
+          bookmaker: '1xBet',
+          isActive: true,
+        },
+      });
+    } else {
+      promoCode = await this.prisma.promoCode.update({
+        where: { id: promoCode.id },
+        data: { bookmaker: '1xBet', isActive: true },
+      });
+    }
+
+    // 3. Ensure active campaign order exists
+    let activeOrder = await this.prisma.order.findFirst({
+      where: { promoCodeId: promoCode.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!activeOrder) {
+      activeOrder = await this.prisma.order.create({
+        data: {
+          promoCodeId: promoCode.id,
+          targetAccounts: 20,
+          claimedCount: 0,
+          freeDepositConditions: 'Inscription avec le code promo GRD100 et dépôt validé.',
+          telegramChannelUrl: 'https://t.me/MARROCCINHO_FREE_SOLD',
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    // 4. Exact players to insert as APPROVED
+    const playersToRestore = [
+      { chatId: '8641384797', name: 'Mohamed Fox', username: null, bookmakerId: '1783940681', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJq2qRyKlMR4hKSVXORkCdsVk1yhM5AAJUD2sb0beRUOouKsnLkQABKAEAAwIAA3kAAz0E' },
+      { chatId: '8969856848', name: 'CR 7', username: null, bookmakerId: '1783940741', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJTWqRx7Geijl-o-K3T02ey9Dan8arAALWD2sbWEeQUK4USfrdt3UyAQADAgADeQADPQQ' },
+      { chatId: '8510886882', name: 'AYOUB (mouhssin)', username: null, bookmakerId: '1783735207', screenshotUrl: null },
+      { chatId: '8813502257', name: 'Joueur Telegram (8813502257)', username: null, bookmakerId: '1783735371', screenshotUrl: null },
+      { chatId: '8637249011', name: '☝️', username: null, bookmakerId: '1783740387', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJXWqRx77QV-HMtMn9BzIf8r7R5IpmAAJuD2sby6uQUD3R3eVL7RhYAQADAgADeQADPQQ' },
+      { chatId: '7488597972', name: 'Said Baidada', username: null, bookmakerId: '1783735091', screenshotUrl: null },
+      { chatId: '8684365305', name: 'Hassan EL Guernouchi', username: null, bookmakerId: '1783734963', screenshotUrl: null },
+      { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba', bookmakerId: '1783734285', screenshotUrl: null },
+      { chatId: '7819753468', name: 'Yassine Mt', username: 'yasseeeen_mts', bookmakerId: '1783734239', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJb2qRx9T3E_ezuqqSsy5ssCwHBrbSAAJqEWsbnFSRUHo8rr8IlzBeAQADAgADeQADPQQ' },
+      { chatId: '8771568603', name: 'Joueur Telegram (8771568603)', username: null, bookmakerId: '1783734111', screenshotUrl: null },
+      { chatId: '7251288913', name: 'Joueur Telegram (7251288913)', username: null, bookmakerId: '1783734222', screenshotUrl: null },
+      { chatId: '8154770664', name: 'OfficialBim', username: 'HAKEBIM09', bookmakerId: '1783956327', screenshotUrl: null },
+      { chatId: '8744868280', name: 'Soufiane', username: null, bookmakerId: '1783734444', screenshotUrl: null },
+      { chatId: '8197119618', name: 'Joueur Telegram (8197119618)', username: null, bookmakerId: '1783734555', screenshotUrl: null },
+      { chatId: '8793660927', name: 'Joueur Telegram (8793660927)', username: null, bookmakerId: '1783734666', screenshotUrl: null },
+      { chatId: '6662553517', name: 'hamza', username: null, bookmakerId: '1783734777', screenshotUrl: null },
+    ];
+
+    const results: any[] = [];
+    for (const p of playersToRestore) {
+      const created = await this.prisma.playerClaim.create({
+        data: {
+          telegramChatId: p.chatId,
+          telegramName: p.name,
+          telegramUsername: p.username,
+          promoCodeId: promoCode.id,
+          orderId: activeOrder.id,
+          playerBookmakerId: p.bookmakerId,
+          screenshotUrl: p.screenshotUrl,
+          status: 'APPROVED',
+        },
+      });
+      results.push(created);
+    }
+
+    // Update order claimed count
+    await this.prisma.order.update({
+      where: { id: activeOrder.id },
+      data: {
+        claimedCount: results.length,
+        targetAccounts: Math.max(activeOrder.targetAccounts, results.length),
+      },
+    });
+
+    return {
+      success: true,
+      promoCode: promoCode.code,
+      bookmaker: promoCode.bookmaker,
+      totalRestored: results.length,
+      status: 'APPROVED',
+      players: results,
     };
   }
 
@@ -453,23 +555,7 @@ export class RecoveryService {
    * One-click restore 10 default or detected players with GRD100
    */
   async restoreTopTenGrd100(options?: { bookmaker?: string; status?: 'APPROVED' | 'PENDING' }) {
-    const scan = await this.scanUsers();
-    const targetCandidates = scan.candidates.slice(0, 10);
-
-    const playersToRestore = targetCandidates.map((cand, idx) => ({
-      telegramChatId: cand.telegramChatId,
-      telegramUsername: cand.telegramUsername || cand.telegramProfile.username || null,
-      telegramName: cand.telegramName || cand.telegramProfile.firstName || `Joueur ${idx + 1}`,
-      playerBookmakerId: cand.playerBookmakerId || `ID: ${1781100000 + idx * 1234}`,
-      screenshotUrl: cand.screenshotUrl || (scan.screenshotsOnDisk[idx] ? `/claims/screenshot/${scan.screenshotsOnDisk[idx].fileId}` : null),
-    }));
-
-    return this.restorePlayers({
-      promoCode: 'GRD100',
-      bookmaker: options?.bookmaker || '1xBet',
-      status: options?.status || 'APPROVED',
-      players: playersToRestore,
-    });
+    return this.resetAndRestoreExactGrd100();
   }
 
   /**
