@@ -372,10 +372,8 @@ export default function DashboardLayout({
       {/* Sidebar Navigation */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">
-            <Sparkles size={18} color="#fff" />
-          </div>
-          <span>AFFILIATE HUB</span>
+          <div className="sidebar-logo-icon">N</div>
+          <span style={{ color: '#E50914', letterSpacing: '0.08em', fontWeight: 900 }}>MRC FLIX</span>
         </div>
 
         <nav className="sidebar-nav">
@@ -394,22 +392,22 @@ export default function DashboardLayout({
             );
           })}
 
-          <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Promo Codes Details Button */}
             <button
               onClick={handleOpenPromoDetails}
               className="sidebar-item"
               style={{
                 width: '100%',
-                border: 'none',
-                background: 'rgba(99, 102, 241, 0.08)',
-                color: 'var(--accent-primary, #6366f1)',
+                border: '1px solid rgba(229, 9, 20, 0.25)',
+                background: 'rgba(229, 9, 20, 0.08)',
+                color: '#FFFFFF',
                 cursor: 'pointer',
                 fontWeight: 600,
                 transition: 'all 0.2s ease',
               }}
             >
-              <Tag size={18} />
+              <Tag size={18} color="#E50914" />
               <span>Détails Codes Promo</span>
             </button>
 
@@ -419,15 +417,15 @@ export default function DashboardLayout({
               className="sidebar-item"
               style={{
                 width: '100%',
-                border: 'none',
-                background: 'rgba(6, 182, 212, 0.08)',
-                color: 'var(--accent-secondary, #06b6d4)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                color: '#E5E5E5',
                 cursor: 'pointer',
                 fontWeight: 600,
                 transition: 'all 0.2s ease',
               }}
             >
-              <BarChart3 size={18} />
+              <BarChart3 size={18} color="#E5E5E5" />
               <span>Statistiques BDD</span>
             </button>
 
@@ -440,9 +438,9 @@ export default function DashboardLayout({
                 width: '100%',
                 border: 'none',
                 background: backupSuccess 
-                  ? 'rgba(34, 197, 94, 0.15)' 
+                  ? 'rgba(70, 211, 105, 0.15)' 
                   : 'rgba(255, 255, 255, 0.04)',
-                color: backupSuccess ? '#22c55e' : 'var(--text-secondary)',
+                color: backupSuccess ? '#46d369' : 'var(--text-secondary)',
                 cursor: isBackingUp ? 'not-allowed' : 'pointer',
                 fontWeight: 600,
                 transition: 'all 0.2s ease',
@@ -451,7 +449,7 @@ export default function DashboardLayout({
               {isBackingUp ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : backupSuccess ? (
-                <CheckCircle2 size={18} color="#22c55e" />
+                <CheckCircle2 size={18} color="#46d369" />
               ) : (
                 <Database size={18} />
               )}
@@ -467,7 +465,7 @@ export default function DashboardLayout({
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-avatar">AM</div>
+          <div className="user-avatar">N</div>
           <div className="user-info">
             <span className="user-name">Affiliate Manager</span>
             <span className="user-role">Gambling Operations</span>
@@ -482,25 +480,30 @@ export default function DashboardLayout({
       <div className="main-wrapper">
         <header className="header">
           <div className="header-title-container">
-            <h1 className="header-title">Gambling Affiliate Control Center</h1>
-            <p className="header-subtitle">Gestion automatique des codes promo, ordres de comptes &amp; bot Telegram</p>
+            <h1 className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span>MRC FLIX CONTROL CENTER</span>
+              <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', background: '#E50914', color: '#fff', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.05em' }}>
+                PRO
+              </span>
+            </h1>
+            <p className="header-subtitle">Gestion automatisée des codes promo, ordres de comptes &amp; bot Telegram</p>
           </div>
 
           <div className="header-actions">
             <button 
               onClick={handleOpenPromoDetails} 
               className="btn btn-secondary" 
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.1rem', border: '1px solid rgba(229, 9, 20, 0.4)', background: 'rgba(229, 9, 20, 0.1)' }}
             >
-              <Tag size={16} color="var(--accent-primary)" />
+              <Tag size={16} color="#E50914" />
               <span>Détails Codes Promo</span>
             </button>
             <button 
               onClick={handleOpenStats} 
               className="btn btn-secondary" 
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.1rem' }}
             >
-              <Activity size={16} color="var(--accent-secondary)" />
+              <Activity size={16} color="#E5E5E5" />
               <span>Statistiques BDD</span>
             </button>
             <div className="badge-wrapper">
