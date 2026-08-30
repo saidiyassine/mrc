@@ -163,35 +163,43 @@ export class RecoveryService {
       } catch (_) {}
     }
 
-    // 4. Ensure known real campaign players are always present as candidates
-    const guaranteedCandidateIds = [
-      '1490527403', // MARROCCINHO (@MARROCCIHNO_BET)
-      '8510886882', // AYOUB
-      '8655112548', // GUARDIOLLA (@GUARDIOLLLA)
-      '8541029191', // BONO//BET (@BONO_WOWBET)
-      '8655088287', // ZIN ZID
-      '105678901',
-      '104567890',
-      '103456789',
-      '102345678',
-      '101234567',
+    // 4. Exact 10 campaign players extracted from production Render logs
+    const exactLoggedPlayers = [
+      { chatId: '8443243836', name: 'Youssef', username: null },
+      { chatId: '5266731992', name: 'mohamed_ali20', username: 'mohamedali9_0' },
+      { chatId: '7944489402', name: 'Yassine Arsalan', username: 'Yassineregis10' },
+      { chatId: '5809486008', name: 'BADREDDINE Khayat', username: null },
+      { chatId: '1992900721', name: 'Karim Zeggoud', username: null },
+      { chatId: '6791656343', name: 'YASSINE 💪', username: null },
+      { chatId: '8544134145', name: 'touik vigf', username: null },
+      { chatId: '6956672726', name: 'Simo Marzak', username: null },
+      { chatId: '8644508763', name: 'Mohsin MKS', username: 'mohsinmksyy' },
+      { chatId: '1490527403', name: 'MARROCCINHO', username: 'MARROCCIHNO_BET' },
     ];
 
-    for (const gid of guaranteedCandidateIds) {
-      if (!candidatesMap.has(gid)) {
-        candidatesMap.set(gid, {
-          telegramChatId: gid,
-          telegramName: `Joueur Telegram (${gid})`,
-          telegramUsername: null,
+    for (const player of exactLoggedPlayers) {
+      if (!candidatesMap.has(player.chatId)) {
+        candidatesMap.set(player.chatId, {
+          telegramChatId: player.chatId,
+          telegramName: player.name,
+          telegramUsername: player.username,
           playerBookmakerId: null,
           screenshotUrl: null,
           hasActiveClaimForGrd100: false,
           existingClaimsCount: 0,
           existingClaims: [],
-          telegramProfile: { isFoundOnTelegram: false },
-          source: 'campaign_recovery',
+          telegramProfile: {
+            isFoundOnTelegram: true,
+            firstName: player.name,
+            username: player.username || undefined,
+          },
+          source: 'render_logs_recovery',
           lastSeen: new Date(),
         });
+      } else {
+        const c = candidatesMap.get(player.chatId)!;
+        if (!c.telegramUsername && player.username) c.telegramUsername = player.username;
+        if (c.telegramName.startsWith('Joueur Telegram') && player.name) c.telegramName = player.name;
       }
     }
 
