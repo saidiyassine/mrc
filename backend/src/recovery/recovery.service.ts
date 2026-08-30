@@ -48,6 +48,34 @@ export class RecoveryService implements OnApplicationBootstrap {
         this.logger.log('Database has 0 player claims on startup. Automatically seeding exact 16 GRD100 players...');
         await this.resetAndRestoreExactGrd100();
       }
+
+      // Sync permanent vault to MasterPlayer table
+      const vaultPath = path.join(process.cwd(), 'data', 'players_vault.json');
+      if (fs.existsSync(vaultPath)) {
+        const vaultData = JSON.parse(fs.readFileSync(vaultPath, 'utf8'));
+        for (const p of vaultData) {
+          await this.prisma.masterPlayer.upsert({
+            where: { telegramChatId: p.chatId },
+            update: {
+              telegramName: p.name,
+              telegramUsername: p.username,
+              playerBookmakerId: p.bookmakerId,
+              promoCode: p.promoCode || 'GRD100',
+              bookmaker: p.bookmaker || '1xBet',
+              status: p.status || 'APPROVED',
+            },
+            create: {
+              telegramChatId: p.chatId,
+              telegramName: p.name,
+              telegramUsername: p.username,
+              playerBookmakerId: p.bookmakerId,
+              promoCode: p.promoCode || 'GRD100',
+              bookmaker: p.bookmaker || '1xBet',
+              status: p.status || 'APPROVED',
+            },
+          });
+        }
+      }
     } catch (err: any) {
       this.logger.error('Error during auto-seed on bootstrap:', err.message);
     }

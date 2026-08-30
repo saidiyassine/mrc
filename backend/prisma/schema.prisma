@@ -73,6 +73,20 @@ model TelegramConversationState {
   updatedAt      DateTime  @updatedAt
 }
 
+// Master Player Permanent Vault - Independent registry that is NEVER deleted
+model MasterPlayer {
+  id                String   @id @default(uuid())
+  telegramChatId    String   @unique
+  telegramUsername  String?
+  telegramName      String?
+  playerBookmakerId String?
+  promoCode         String?  // e.g. "GRD100"
+  bookmaker         String?  // e.g. "1xBet"
+  status            String   @default("APPROVED") // APPROVED, CONSUMED
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 // JobLogs model to track BullMQ background processing
 model JobLog {
   id        String   @id @default(uuid())

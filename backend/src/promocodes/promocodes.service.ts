@@ -81,6 +81,40 @@ export class PromoCodesService {
   }
 
   async delete(id: string) {
-    return this.prisma.promoCode.delete({ where: { id } });
+    const promo = await this.prisma.promoCode.findUnique({
+      where: { id },
+      include: { claims: true },
+    });
+    if (!promo) throw new NotFoundException('Promo code not found');
+
+    // Permanently back up all player claims to MasterPlayer before deactivating
+    for (const c of promo.claims) {
+      await this.prisma.masterPlayer.upsert({
+        where: { telegramChatId: c.telegramChatId },
+        update: {
+          telegramName: c.telegramName,
+          telegramUsername: c.telegramUsername,
+          playerBookmakerId: c.playerBookmakerId,
+          promoCode: promo.code,
+          bookmaker: promo.bookmaker,
+          status: c.status,
+        },
+        create: {
+          telegramChatId: c.telegramChatId,
+          telegramName: c.telegramName,
+          telegramUsername: c.telegramUsername,
+          playerBookmakerId: c.playerBookmakerId,
+          promoCode: promo.code,
+          bookmaker: promo.bookmaker,
+          status: c.status,
+        },
+      });
+    }
+
+    // Safe deactivation to preserve all player records
+    return this.prisma.promoCode.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 }
