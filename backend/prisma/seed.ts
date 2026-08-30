@@ -2,177 +2,91 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const bookmakers = ['Melbet', 'XParibet', '1xBet', 'Betway', 'SportyBet'];
-
-const promoCodes = [
-  { code: 'ATLASS12', bookmaker: 'Melbet' },
-  { code: 'XPARI2024', bookmaker: 'XParibet' },
-  { code: 'BET1X50', bookmaker: '1xBet' },
-  { code: 'BWAY100', bookmaker: 'Betway' },
-  { code: 'SPORTY25', bookmaker: 'SportyBet' },
-  { code: 'MELWIN88', bookmaker: 'Melbet' },
-  { code: 'XFREE500', bookmaker: 'XParibet' },
+const exact16Players = [
+  { chatId: '8641384797', name: 'Mohamed Fox', username: null, bookmakerId: '1783940681', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJq2qRyKlMR4hKSVXORkCdsVk1yhM5AAJUD2sb0beRUOouKsnLkQABKAEAAwIAA3kAAz0E' },
+  { chatId: '8969856848', name: 'CR 7', username: null, bookmakerId: '1783940741', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJTWqRx7Geijl-o-K3T02ey9Dan8arAALWD2sbWEeQUK4USfrdt3UyAQADAgADeQADPQQ' },
+  { chatId: '8510886882', name: 'AYOUB (mouhssin)', username: null, bookmakerId: '1783735207', screenshotUrl: null },
+  { chatId: '8813502257', name: 'Joueur Telegram (8813502257)', username: null, bookmakerId: '1783735371', screenshotUrl: null },
+  { chatId: '8637249011', name: '☝️', username: null, bookmakerId: '1783740387', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJXWqRx77QV-HMtMn9BzIf8r7R5IpmAAJuD2sby6uQUD3R3eVL7RhYAQADAgADeQADPQQ' },
+  { chatId: '7488597972', name: 'Said Baidada', username: null, bookmakerId: '1783735091', screenshotUrl: null },
+  { chatId: '8684365305', name: 'Hassan EL Guernouchi', username: null, bookmakerId: '1783734963', screenshotUrl: null },
+  { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba', bookmakerId: '1783734285', screenshotUrl: null },
+  { chatId: '7819753468', name: 'Yassine Mt', username: 'yasseeeen_mts', bookmakerId: '1783734239', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJb2qRx9T3E_ezuqqSsy5ssCwHBrbSAAJqEWsbnFSRUHo8rr8IlzBeAQADAgADeQADPQQ' },
+  { chatId: '8771568603', name: 'Joueur Telegram (8771568603)', username: null, bookmakerId: '1783734111', screenshotUrl: null },
+  { chatId: '7251288913', name: 'Joueur Telegram (7251288913)', username: null, bookmakerId: '1783734222', screenshotUrl: null },
+  { chatId: '8154770664', name: 'OfficialBim', username: 'HAKEBIM09', bookmakerId: '1783956327', screenshotUrl: null },
+  { chatId: '8744868280', name: 'Soufiane', username: null, bookmakerId: '1783734444', screenshotUrl: null },
+  { chatId: '8197119618', name: 'Joueur Telegram (8197119618)', username: null, bookmakerId: '1783734555', screenshotUrl: null },
+  { chatId: '8793660927', name: 'Joueur Telegram (8793660927)', username: null, bookmakerId: '1783734666', screenshotUrl: null },
+  { chatId: '6662553517', name: 'hamza', username: null, bookmakerId: '1783734777', screenshotUrl: null },
 ];
-
-const telegramUsers = [
-  { chatId: '101234567', username: 'ahmed_plays', name: 'Ahmed Benali' },
-  { chatId: '102345678', username: 'sara_bet', name: 'Sara Mahmoud' },
-  { chatId: '103456789', username: 'karim_wins', name: 'Karim Ouali' },
-  { chatId: '104567890', username: 'nour_lucky', name: 'Nour Haddad' },
-  { chatId: '105678901', username: 'youcef_g', name: 'Youcef Gharbi' },
-  { chatId: '106789012', username: 'lina_jackpot', name: 'Lina Saidi' },
-  { chatId: '107890123', username: 'omar_bettor', name: 'Omar Bensalem' },
-  { chatId: '108901234', username: 'fatima_spin', name: 'Fatima Zohra' },
-  { chatId: '109012345', username: 'amine_777', name: 'Amine Khelifi' },
-  { chatId: '110123456', username: 'rania_pro', name: 'Rania Boudiaf' },
-  { chatId: '111234567', username: 'ziad_bet', name: 'Ziad Merzouk' },
-  { chatId: '112345678', username: 'hiba_lucky', name: 'Hiba Taleb' },
-  { chatId: '113456789', username: 'bilal_wins', name: 'Bilal Cherif' },
-  { chatId: '114567890', username: 'asma_slots', name: 'Asma Rahmani' },
-  { chatId: '115678901', username: 'walid_pro', name: 'Walid Amrani' },
-];
-
-const claimStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
-const orderStatuses = ['ACTIVE', 'COMPLETED', 'PAUSED', 'PENDING'];
-
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomDate(daysBack: number): Date {
-  const date = new Date();
-  date.setDate(date.getDate() - randomInt(0, daysBack));
-  date.setHours(randomInt(0, 23), randomInt(0, 59), randomInt(0, 59));
-  return date;
-}
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding database with exact 16 players for 1xBet GRD100...');
 
-  // Clean existing data
-  await prisma.jobLog.deleteMany();
-  await prisma.telegramConversationState.deleteMany();
-  await prisma.playerClaim.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.promoCode.deleteMany();
-  await prisma.user.deleteMany();
-  console.log('🗑️  Cleared existing data');
-
-  // Create admin user
-  await prisma.user.create({
-    data: {
-      email: 'admin@bot.com',
-      name: 'Admin',
-      password: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36X7l6/Xe9gCMkVBgP6iZUC',
-    },
+  // Create or update promo code GRD100
+  let promoCode = await prisma.promoCode.findUnique({
+    where: { code: 'GRD100' },
   });
-  console.log('👤 Created admin user (email: admin@bot.com)');
 
-  // Create promo codes
-  const createdPromoCodes = await Promise.all(
-    promoCodes.map((p) =>
-      prisma.promoCode.create({
-        data: {
-          code: p.code,
-          bookmaker: p.bookmaker,
-          isActive: Math.random() > 0.2,
-        },
-      }),
-    ),
-  );
-  console.log(`🎟️  Created ${createdPromoCodes.length} promo codes`);
-
-  // Create orders for each promo code
-  const createdOrders: { order: any; promo: any }[] = [];
-  for (const promo of createdPromoCodes) {
-    const numOrders = randomInt(1, 3);
-    for (let i = 0; i < numOrders; i++) {
-      const targetAccounts = randomInt(10, 50);
-      const order = await prisma.order.create({
-        data: {
-          promoCodeId: promo.id,
-          targetAccounts,
-          claimedCount: randomInt(0, targetAccounts),
-          freeDepositConditions: `1. Join our Telegram channel\n2. Register on ${promo.bookmaker} using code ${promo.code}\n3. Make a minimum deposit of 500 DZD\n4. Submit your account ID and screenshot as proof`,
-          status: randomItem(orderStatuses),
-          createdAt: randomDate(60),
-        },
-      });
-      createdOrders.push({ order, promo });
-    }
-  }
-  console.log(`📋 Created ${createdOrders.length} orders`);
-
-  // Create player claims
-  const usedCombinations = new Set<string>();
-  let claimsCreated = 0;
-
-  for (const user of telegramUsers) {
-    const numClaims = randomInt(1, 3);
-    const shuffledOrders = [...createdOrders].sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < numClaims && i < shuffledOrders.length; i++) {
-      const { order, promo } = shuffledOrders[i];
-      const combo = `${user.chatId}-${promo.id}`;
-
-      if (usedCombinations.has(combo)) continue;
-      usedCombinations.add(combo);
-
-      await prisma.playerClaim.create({
-        data: {
-          telegramChatId: user.chatId,
-          telegramUsername: user.username,
-          telegramName: user.name,
-          promoCodeId: promo.id,
-          orderId: order.id,
-          playerBookmakerId: `ID: ${randomInt(1000000, 9999999)}`,
-          screenshotUrl: null,
-          status: randomItem(claimStatuses),
-          createdAt: randomDate(30),
-        },
-      });
-      claimsCreated++;
-    }
-  }
-  console.log(`🙋 Created ${claimsCreated} player claims`);
-
-  // Create telegram conversation states
-  for (const user of telegramUsers.slice(0, 5)) {
-    await prisma.telegramConversationState.create({
+  if (!promoCode) {
+    promoCode = await prisma.promoCode.create({
       data: {
-        telegramChatId: user.chatId,
-        step: randomItem(['IDLE', 'AWAITING_PROMO_CODE', 'AWAITING_BOOKMAKER_ID', 'AWAITING_SCREENSHOT']),
-        currentOrderId: randomItem(createdOrders)?.order?.id ?? null,
-        metadata: JSON.stringify({ lastMessage: 'Hello!', attempts: randomInt(1, 3) }),
+        code: 'GRD100',
+        bookmaker: '1xBet',
+        isActive: true,
       },
     });
   }
-  console.log('💬 Created 5 telegram conversation states');
 
-  // Create job logs
-  const jobNames = ['process-claim', 'send-notification', 'update-order-status', 'cleanup-expired'];
-  const queueNames = ['claims-queue', 'notifications-queue', 'orders-queue'];
-  const jobStatuses = ['SUCCESS', 'FAILED', 'PENDING'];
+  // Create or update order
+  let order = await prisma.order.findFirst({
+    where: { promoCodeId: promoCode.id },
+  });
 
-  for (let i = 0; i < 20; i++) {
-    await prisma.jobLog.create({
+  if (!order) {
+    order = await prisma.order.create({
       data: {
-        queueName: randomItem(queueNames),
-        jobName: randomItem(jobNames),
-        status: randomItem(jobStatuses),
-        payload: JSON.stringify({ userId: randomItem(telegramUsers).chatId, attempt: randomInt(1, 3) }),
-        error: Math.random() > 0.7 ? 'Connection timeout after 5000ms' : null,
-        createdAt: randomDate(7),
+        promoCodeId: promoCode.id,
+        targetAccounts: 20,
+        claimedCount: exact16Players.length,
+        freeDepositConditions: 'Inscription avec le code promo GRD100 sur 1xBet et dépôt validé.',
+        telegramChannelUrl: 'https://t.me/MARROCCINHO_FREE_SOLD',
+        status: 'ACTIVE',
       },
     });
   }
-  console.log('📝 Created 20 job logs');
 
-  console.log('\n✅ Seeding complete!');
+  for (const p of exact16Players) {
+    await prisma.playerClaim.upsert({
+      where: {
+        telegramChatId_promoCodeId: {
+          telegramChatId: p.chatId,
+          promoCodeId: promoCode.id,
+        },
+      },
+      update: {
+        telegramName: p.name,
+        telegramUsername: p.username,
+        playerBookmakerId: p.bookmakerId,
+        screenshotUrl: p.screenshotUrl,
+        status: 'APPROVED',
+        orderId: order.id,
+      },
+      create: {
+        telegramChatId: p.chatId,
+        telegramName: p.name,
+        telegramUsername: p.username,
+        promoCodeId: promoCode.id,
+        orderId: order.id,
+        playerBookmakerId: p.bookmakerId,
+        screenshotUrl: p.screenshotUrl,
+        status: 'APPROVED',
+      },
+    });
+  }
+
+  console.log(`✅ Seeded ${exact16Players.length} exact 1xBet GRD100 players with status APPROVED!`);
 }
 
 main()

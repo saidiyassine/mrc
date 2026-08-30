@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { ConfigService } from '@nestjs/config';
@@ -32,7 +32,7 @@ export interface RecoveredUserCandidate {
 }
 
 @Injectable()
-export class RecoveryService {
+export class RecoveryService implements OnApplicationBootstrap {
   private readonly logger = new Logger(RecoveryService.name);
 
   constructor(
@@ -40,6 +40,18 @@ export class RecoveryService {
     private readonly telegramService: TelegramService,
     private readonly config: ConfigService,
   ) {}
+
+  async onApplicationBootstrap() {
+    try {
+      const claimsCount = await this.prisma.playerClaim.count();
+      if (claimsCount === 0) {
+        this.logger.log('Database has 0 player claims on startup. Automatically seeding exact 16 GRD100 players...');
+        await this.resetAndRestoreExactGrd100();
+      }
+    } catch (err: any) {
+      this.logger.error('Error during auto-seed on bootstrap:', err.message);
+    }
+  }
 
   private get botToken(): string {
     return this.config.get<string>('TELEGRAM_BOT_TOKEN') || '';
