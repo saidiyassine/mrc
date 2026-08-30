@@ -395,28 +395,6 @@ export default function DashboardLayout({
           })}
 
           <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {/* Recovery Hub Button */}
-            <button
-              onClick={handleOpenRecovery}
-              className="sidebar-item"
-              style={{
-                width: '100%',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 88, 12, 0.12) 100%)',
-                color: '#fbbf24',
-                cursor: 'pointer',
-                fontWeight: 700,
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 10px rgba(245, 158, 11, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-              }}
-            >
-              <RotateCcw size={18} color="#fbbf24" />
-              <span>Restaurer Joueurs (GRD100)</span>
-            </button>
-
             {/* Promo Codes Details Button */}
             <button
               onClick={handleOpenPromoDetails}
@@ -509,26 +487,6 @@ export default function DashboardLayout({
           </div>
 
           <div className="header-actions">
-            <button 
-              onClick={handleOpenRecovery} 
-              className="btn" 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem', 
-                padding: '0.6rem 1.1rem',
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(234, 88, 12, 0.15) 100%)',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                color: '#fbbf24',
-                fontWeight: 600,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)',
-              }}
-            >
-              <RotateCcw size={16} color="#fbbf24" />
-              <span>Restaurer Joueurs (GRD100)</span>
-            </button>
             <button 
               onClick={handleOpenPromoDetails} 
               className="btn btn-secondary" 
