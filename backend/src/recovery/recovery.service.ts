@@ -163,8 +163,13 @@ export class RecoveryService {
       } catch (_) {}
     }
 
-    // 4. Exact 10 campaign players extracted from production Render logs
+    // 4. User's exact campaign players prioritizing the 5 specific IDs provided
     const exactLoggedPlayers = [
+      { chatId: '8813502257', name: 'Joueur Telegram', username: null },
+      { chatId: '7488597972', name: 'Said Baidada', username: null },
+      { chatId: '8684365305', name: 'Joueur Telegram', username: null },
+      { chatId: '8510886882', name: 'AYOUB', username: null },
+      { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba' },
       { chatId: '8443243836', name: 'Youssef', username: null },
       { chatId: '5266731992', name: 'mohamed_ali20', username: 'mohamedali9_0' },
       { chatId: '7944489402', name: 'Yassine Arsalan', username: 'Yassineregis10' },
@@ -193,7 +198,7 @@ export class RecoveryService {
             firstName: player.name,
             username: player.username || undefined,
           },
-          source: 'render_logs_recovery',
+          source: 'user_provided_recovery',
           lastSeen: new Date(),
         });
       } else {
