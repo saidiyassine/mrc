@@ -163,23 +163,26 @@ export class RecoveryService {
       } catch (_) {}
     }
 
-    // 4. User's exact campaign players prioritizing the 5 specific IDs provided
+    // 4. Exact GRD100 1xBet players extracted from production Render logs
     const exactLoggedPlayers = [
-      { chatId: '8813502257', name: 'Joueur Telegram', username: null },
-      { chatId: '7488597972', name: 'Said Baidada', username: null },
-      { chatId: '8684365305', name: 'Joueur Telegram', username: null },
-      { chatId: '8510886882', name: 'AYOUB', username: null },
-      { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba' },
-      { chatId: '8443243836', name: 'Youssef', username: null },
-      { chatId: '5266731992', name: 'mohamed_ali20', username: 'mohamedali9_0' },
-      { chatId: '7944489402', name: 'Yassine Arsalan', username: 'Yassineregis10' },
-      { chatId: '5809486008', name: 'BADREDDINE Khayat', username: null },
-      { chatId: '1992900721', name: 'Karim Zeggoud', username: null },
-      { chatId: '6791656343', name: 'YASSINE 💪', username: null },
-      { chatId: '8544134145', name: 'touik vigf', username: null },
-      { chatId: '6956672726', name: 'Simo Marzak', username: null },
-      { chatId: '8644508763', name: 'Mohsin MKS', username: 'mohsinmksyy' },
-      { chatId: '1490527403', name: 'MARROCCINHO', username: 'MARROCCIHNO_BET' },
+      { chatId: '8813502257', name: 'Joueur Telegram', username: null, bookmakerId: '1783735207', screenshotUrl: null },
+      { chatId: '7488597972', name: 'Said Baidada', username: null, bookmakerId: '1783739305', screenshotUrl: null },
+      { chatId: '8684365305', name: 'Hassan EL Guernouchi', username: null, bookmakerId: '1783950203', screenshotUrl: null },
+      { chatId: '8510886882', name: 'AYOUB (mouhssin)', username: null, bookmakerId: '1783735207', screenshotUrl: null },
+      { chatId: '8415623245', name: 'Mehdi Sadi', username: 'Mehdi_ggba', bookmakerId: '1783734575', screenshotUrl: null },
+      { chatId: '8969856848', name: 'CR 7', username: null, bookmakerId: '1783940741', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJTWqRx7Geijl-o-K3T02ey9Dan8arAALWD2sbWEeQUK4USfrdt3UyAQADAgADeQADPQQ' },
+      { chatId: '8616504927', name: 'Lhabib Aznag', username: null, bookmakerId: '1783950203', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJEWqRx4i1XNwV0GaSdRB_f5UXcwABNgACIRBrGzofkVBVPxlRMGwk9AEAAwIAA3kAAz0E' },
+      { chatId: '8637249011', name: '☝️', username: null, bookmakerId: '1783740387', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJXWqRx77QV-HMtMn9BzIf8r7R5IpmAAJuD2sby6uQUD3R3eVL7RhYAQADAgADeQADPQQ' },
+      { chatId: '7819753468', name: 'Yassine Mt', username: 'yasseeeen_mts', bookmakerId: '1783734575', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJb2qRx9T3E_ezuqqSsy5ssCwHBrbSAAJqEWsbnFSRUHo8rr8IlzBeAQADAgADeQADPQQ' },
+      { chatId: '8421345065', name: 'aziz elbennani', username: null, bookmakerId: '1783735877', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIIrmqRxkXZSY0SRJWqr3bzaEoY8yCXAAKMD2sbUteQUDUu5wYR5zw-AQADAgADeQADPQQ' },
+      { chatId: '6791656343', name: 'YASSINE 💪', username: null, bookmakerId: '1783951503', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJXGqRx73qAtGtj7_uq0QhGg0VQSSTAAKCD2sbnEKQULlTQUUdNX07AQADAgADeQADPQQ' },
+      { chatId: '8511178669', name: 'ghezlan', username: null, bookmakerId: '1783739305', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJdmqRx-JaJuTs5pfa7KkRiX0t9ytdAAIsE2sbjQGRUDEO8gkqlhxzAQADAgADeQADPQQ' },
+      { chatId: '6454399548', name: 'Bilal Lmslek', username: null, bookmakerId: '1783953079', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJk2qRyC8m7JPSCpFtNuMzvv8dP9w5AAIGEWsbqSaIUJivPzCSPK6wAQADAgADeQADPQQ' },
+      { chatId: '8286253180', name: 'abdouuu', username: 'abdouu_ameraouza', bookmakerId: '1783956109', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJnGqRyFYhJmyKvldih1WwVV37-SFZAAJFD2sbc_aRUO8i_IkkDr6OAQADAgADeQADPQQ' },
+      { chatId: '8641384797', name: 'Mohamed Fox', username: null, bookmakerId: '1783940681', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIJq2qRyKlMR4hKSVXORkCdsVk1yhM5AAJUD2sb0beRUOouKsnLkQABKAEAAwIAA3kAAz0E' },
+      { chatId: '8873892184', name: '123', username: 'imadAhlo', bookmakerId: '1784823325', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKEmqTei1ibO7TW4sVTEVzXoIFrvR4AAKsDmsb0jOZUJXeg-k6hgABHgEAAwIAA3kAAz0E' },
+      { chatId: '8838885325', name: 'Layla', username: 'bdbdbdueue', bookmakerId: '1784821287', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKEGqTei34iJ7GXAP9oemaEva303l1AAJ6D2sbd6OYUDlae2bYwiaaAQADAgADeQADPQQ' },
+      { chatId: '8778241465', name: '@@ @', username: 'hadicash', bookmakerId: '1783735877', screenshotUrl: '/claims/screenshot/AgACAgQAAxkBAAIKFGqTei06W-GxUJv4ifIUlC0_PmUDAAJFEGsbh6GYUBdVdm-GGa4GAQADAgADeQADPQQ' },
     ];
 
     for (const player of exactLoggedPlayers) {
@@ -188,8 +191,8 @@ export class RecoveryService {
           telegramChatId: player.chatId,
           telegramName: player.name,
           telegramUsername: player.username,
-          playerBookmakerId: null,
-          screenshotUrl: null,
+          playerBookmakerId: player.bookmakerId,
+          screenshotUrl: player.screenshotUrl,
           hasActiveClaimForGrd100: false,
           existingClaimsCount: 0,
           existingClaims: [],
@@ -198,13 +201,15 @@ export class RecoveryService {
             firstName: player.name,
             username: player.username || undefined,
           },
-          source: 'user_provided_recovery',
+          source: 'render_logs_recovery',
           lastSeen: new Date(),
         });
       } else {
         const c = candidatesMap.get(player.chatId)!;
         if (!c.telegramUsername && player.username) c.telegramUsername = player.username;
         if (c.telegramName.startsWith('Joueur Telegram') && player.name) c.telegramName = player.name;
+        if (!c.playerBookmakerId && player.bookmakerId) c.playerBookmakerId = player.bookmakerId;
+        if (!c.screenshotUrl && player.screenshotUrl) c.screenshotUrl = player.screenshotUrl;
       }
     }
 
