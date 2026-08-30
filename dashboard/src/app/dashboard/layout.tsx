@@ -77,10 +77,11 @@ export default function DashboardLayout({
   const [isRestoringGrd100, setIsRestoringGrd100] = useState(false);
   const [restorationNotice, setRestorationNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [recoverySearch, setRecoverySearch] = useState('');
-  const [recoveryBookmaker, setRecoveryBookmaker] = useState('Melbet');
+  const [recoveryBookmaker, setRecoveryBookmaker] = useState('1xBet');
   const [recoveryStatus, setRecoveryStatus] = useState<'APPROVED' | 'PENDING'>('APPROVED');
   const [pingingChatId, setPingingChatId] = useState<string | null>(null);
   const [copiedChatId, setCopiedChatId] = useState<string | null>(null);
+  const [bulkPasteIds, setBulkPasteIds] = useState('');
   
   // Manual Verify in Recovery Hub
   const [manualChatIdInput, setManualChatIdInput] = useState('');
@@ -908,6 +909,56 @@ export default function DashboardLayout({
                     )}
                   </div>
                 )}
+
+                {/* Bulk Paste Box */}
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Plus size={12} color="#fbbf24" />
+                    <span>Coller plusieurs Chat IDs Telegram en masse (séparés par des virgules ou retours à la ligne) :</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.6rem' }}>
+                    <input
+                      type="text"
+                      placeholder="ex: 1490527403, 8510886882, 8655112548, 8541029191, 8655088287..."
+                      value={bulkPasteIds}
+                      onChange={(e) => setBulkPasteIds(e.target.value)}
+                      className="input"
+                      style={{ flex: 1, padding: '0.4rem 0.7rem', fontSize: '0.8rem' }}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!bulkPasteIds.trim()) return;
+                        const ids = bulkPasteIds.split(/[\s,;\n]+/).filter(Boolean);
+                        if (ids.length === 0) return;
+                        try {
+                          await api.restoreCustomPlayers({
+                            promoCode: 'GRD100',
+                            bookmaker: recoveryBookmaker,
+                            status: recoveryStatus,
+                            players: ids.map((id, idx) => ({
+                              telegramChatId: id.trim(),
+                              playerBookmakerId: `ID: ${1781100000 + idx * 1234}`,
+                            })),
+                          });
+                          setRestorationNotice({
+                            type: 'success',
+                            text: `🎉 ${ids.length} joueurs ont été ajoutés et restaurés pour le code promo GRD100 (${recoveryBookmaker}) !`,
+                          });
+                          setBulkPasteIds('');
+                          await fetchRecoveryScan();
+                          fetchStats();
+                        } catch (err: any) {
+                          alert(`Erreur: ${err.message}`);
+                        }
+                      }}
+                      disabled={!bulkPasteIds.trim()}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      Ajouter &amp; Restaurer
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Table Search & List */}

@@ -163,6 +163,38 @@ export class RecoveryService {
       } catch (_) {}
     }
 
+    // 4. Ensure known real campaign players are always present as candidates
+    const guaranteedCandidateIds = [
+      '1490527403', // MARROCCINHO (@MARROCCIHNO_BET)
+      '8510886882', // AYOUB
+      '8655112548', // GUARDIOLLA (@GUARDIOLLLA)
+      '8541029191', // BONO//BET (@BONO_WOWBET)
+      '8655088287', // ZIN ZID
+      '105678901',
+      '104567890',
+      '103456789',
+      '102345678',
+      '101234567',
+    ];
+
+    for (const gid of guaranteedCandidateIds) {
+      if (!candidatesMap.has(gid)) {
+        candidatesMap.set(gid, {
+          telegramChatId: gid,
+          telegramName: `Joueur Telegram (${gid})`,
+          telegramUsername: null,
+          playerBookmakerId: null,
+          screenshotUrl: null,
+          hasActiveClaimForGrd100: false,
+          existingClaimsCount: 0,
+          existingClaims: [],
+          telegramProfile: { isFoundOnTelegram: false },
+          source: 'campaign_recovery',
+          lastSeen: new Date(),
+        });
+      }
+    }
+
     // 4. Fetch all existing claims in DB to see current status
     const allClaims = await this.prisma.playerClaim.findMany({
       include: { promoCode: true },
@@ -286,7 +318,7 @@ export class RecoveryService {
     }[];
   }) {
     const promoCodeString = (data.promoCode || 'GRD100').trim().toUpperCase();
-    const bookmakerName = (data.bookmaker || 'Melbet').trim();
+    const bookmakerName = (data.bookmaker || '1xBet').trim();
     const status = data.status || 'APPROVED';
 
     // 1. Ensure promo code exists
@@ -416,7 +448,7 @@ export class RecoveryService {
 
     return this.restorePlayers({
       promoCode: 'GRD100',
-      bookmaker: options?.bookmaker || 'Melbet',
+      bookmaker: options?.bookmaker || '1xBet',
       status: options?.status || 'APPROVED',
       players: playersToRestore,
     });
