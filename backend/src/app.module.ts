@@ -7,6 +7,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { PromoCodesModule } from './promocodes/promocodes.module';
 import { OrdersModule } from './orders/orders.module';
 import { ClaimsModule } from './claims/claims.module';
+import { RecoveryModule } from './recovery/recovery.module';
 
 import { AppController } from './app.controller';
 
@@ -43,6 +44,7 @@ import { AppController } from './app.controller';
     PromoCodesModule,
     OrdersModule,
     ClaimsModule,
+    RecoveryModule,
   ],
   controllers: [AppController],
   providers: [PrismaService],

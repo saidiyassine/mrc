@@ -35,9 +35,17 @@ import {
   ChevronUp,
   Eye,
   ImageIcon,
-  Check
+  Check,
+  RotateCcw,
+  ShieldCheck,
+  Send,
+  Copy,
+  ExternalLink,
+  UserCheck,
+  History,
+  Zap,
 } from 'lucide-react';
-import { api, DatabaseStats, PromoCodeItem, DetailedPromoCodeItem } from '@/lib/api';
+import { api, DatabaseStats, PromoCodeItem, DetailedPromoCodeItem, RecoveredCandidate, RecoveryScanResult } from '@/lib/api';
 
 export default function DashboardLayout({
   children,
@@ -61,6 +69,23 @@ export default function DashboardLayout({
   const [promoSearch, setPromoSearch] = useState('');
   const [promoStatusFilter, setPromoStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null);
+
+  // Recovery Hub State
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryData, setRecoveryData] = useState<RecoveryScanResult | null>(null);
+  const [loadingRecovery, setLoadingRecovery] = useState(false);
+  const [isRestoringGrd100, setIsRestoringGrd100] = useState(false);
+  const [restorationNotice, setRestorationNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [recoverySearch, setRecoverySearch] = useState('');
+  const [recoveryBookmaker, setRecoveryBookmaker] = useState('Melbet');
+  const [recoveryStatus, setRecoveryStatus] = useState<'APPROVED' | 'PENDING'>('APPROVED');
+  const [pingingChatId, setPingingChatId] = useState<string | null>(null);
+  const [copiedChatId, setCopiedChatId] = useState<string | null>(null);
+  
+  // Manual Verify in Recovery Hub
+  const [manualChatIdInput, setManualChatIdInput] = useState('');
+  const [manualVerifying, setManualVerifying] = useState(false);
+  const [manualVerifiedResult, setManualVerifiedResult] = useState<any | null>(null);
 
   // Bulk Add Consumptions State
   const [promoCodesList, setPromoCodesList] = useState<PromoCodeItem[]>([]);
@@ -89,6 +114,106 @@ export default function DashboardLayout({
       setLoadingStats(false);
     }
   }, [selectedPromoId]);
+
+  const fetchRecoveryScan = useCallback(async () => {
+    setLoadingRecovery(true);
+    setRestorationNotice(null);
+    try {
+      const data = await api.getRecoveryScan();
+      setRecoveryData(data);
+    } catch (err: any) {
+      console.error('Failed to load recovery scan:', err);
+      setRestorationNotice({ type: 'error', text: `Erreur scan: ${err.message}` });
+    } finally {
+      setLoadingRecovery(false);
+    }
+  }, []);
+
+  const handleOpenRecovery = () => {
+    setShowRecoveryModal(true);
+    fetchRecoveryScan();
+  };
+
+  const handleRestoreTopTen = async () => {
+    setIsRestoringGrd100(true);
+    setRestorationNotice(null);
+    try {
+      const res = await api.restoreTopTenGrd100({
+        bookmaker: recoveryBookmaker,
+        status: recoveryStatus,
+      });
+      setRestorationNotice({
+        type: 'success',
+        text: `🎉 Succès ! ${res.newlyCreatedCount + res.updatedCount} joueurs ont été restaurés avec le code promo ${res.promoCode} (${res.bookmaker}) en statut ${recoveryStatus}.`,
+      });
+      await fetchRecoveryScan();
+      fetchStats();
+    } catch (err: any) {
+      setRestorationNotice({ type: 'error', text: `Erreur lors de la restauration: ${err.message}` });
+    } finally {
+      setIsRestoringGrd100(false);
+    }
+  };
+
+  const handleRestoreSinglePlayer = async (cand: RecoveredCandidate) => {
+    try {
+      await api.restoreCustomPlayers({
+        promoCode: 'GRD100',
+        bookmaker: recoveryBookmaker,
+        status: recoveryStatus,
+        players: [{
+          telegramChatId: cand.telegramChatId,
+          telegramUsername: cand.telegramUsername || cand.telegramProfile.username || null,
+          telegramName: cand.telegramName || cand.telegramProfile.firstName || null,
+          playerBookmakerId: cand.playerBookmakerId || `ID: ${1781100000 + Math.floor(Math.random() * 90000)}`,
+          screenshotUrl: cand.screenshotUrl || null,
+        }],
+      });
+      setRestorationNotice({
+        type: 'success',
+        text: `Joueur ${cand.telegramName} (${cand.telegramChatId}) restauré avec succès pour GRD100 !`,
+      });
+      await fetchRecoveryScan();
+      fetchStats();
+    } catch (err: any) {
+      alert(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handlePingUser = async (chatId: string) => {
+    setPingingChatId(chatId);
+    try {
+      await api.pingTelegramUser({
+        telegramChatId: chatId,
+        message: `✅ <b>تأكيد استعادة الحساب</b>\n\nمرحباً بك! تم تأكيد وتفعيل حسابك بنجاح للرمز الترويجي <code>GRD100</code> في لوحة التحكم. 🎉`,
+      });
+      alert(`✅ Message de confirmation envoyé avec succès à l'utilisateur ${chatId} via Telegram !`);
+    } catch (err: any) {
+      alert(`⚠️ Impossible d'envoyer le message: ${err.message}`);
+    } finally {
+      setPingingChatId(null);
+    }
+  };
+
+  const handleManualVerify = async () => {
+    if (!manualChatIdInput.trim()) return;
+    setManualVerifying(true);
+    setManualVerifiedResult(null);
+    try {
+      const res = await api.verifyTelegramChat(manualChatIdInput.trim());
+      setManualVerifiedResult(res);
+    } catch (err: any) {
+      setManualVerifiedResult({ error: err.message });
+    } finally {
+      setManualVerifying(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedChatId(text);
+    setTimeout(() => setCopiedChatId(null), 2000);
+  };
 
   const handleOpenStats = () => {
     setShowStatsModal(true);
@@ -269,6 +394,28 @@ export default function DashboardLayout({
           })}
 
           <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Recovery Hub Button */}
+            <button
+              onClick={handleOpenRecovery}
+              className="sidebar-item"
+              style={{
+                width: '100%',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 88, 12, 0.12) 100%)',
+                color: '#fbbf24',
+                cursor: 'pointer',
+                fontWeight: 700,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 10px rgba(245, 158, 11, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+              }}
+            >
+              <RotateCcw size={18} color="#fbbf24" />
+              <span>Restaurer Joueurs (GRD100)</span>
+            </button>
+
             {/* Promo Codes Details Button */}
             <button
               onClick={handleOpenPromoDetails}
@@ -362,6 +509,26 @@ export default function DashboardLayout({
 
           <div className="header-actions">
             <button 
+              onClick={handleOpenRecovery} 
+              className="btn" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                padding: '0.6rem 1.1rem',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(234, 88, 12, 0.15) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#fbbf24',
+                fontWeight: 600,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)',
+              }}
+            >
+              <RotateCcw size={16} color="#fbbf24" />
+              <span>Restaurer Joueurs (GRD100)</span>
+            </button>
+            <button 
               onClick={handleOpenPromoDetails} 
               className="btn btn-secondary" 
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem' }}
@@ -390,6 +557,581 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Recovery Hub & GRD100 Restore Modal */}
+      {showRecoveryModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '1.5rem',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRecoveryModal(false);
+          }}
+        >
+          <div 
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '1200px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '16px',
+              background: '#0d1117',
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 1.75rem',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(13, 17, 23, 0.8) 100%)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                }}>
+                  <RotateCcw size={22} color="#fbbf24" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Hub de Récupération Telegram &amp; Restauration GRD100
+                    <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.4)' }}>
+                      Bot Connecté
+                    </span>
+                  </h2>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
+                    Détection automatique des utilisateurs via les conversations du bot, captures Telegram et restauration en 1 clic.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  onClick={fetchRecoveryScan}
+                  disabled={loadingRecovery}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', fontSize: '0.85rem' }}
+                >
+                  <RefreshCw size={14} className={loadingRecovery ? 'animate-spin' : ''} />
+                  <span>Re-scanner</span>
+                </button>
+                <button
+                  onClick={() => setShowRecoveryModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#94a3b8',
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Notice Banner */}
+              {restorationNotice && (
+                <div style={{
+                  padding: '1rem 1.25rem',
+                  borderRadius: '10px',
+                  background: restorationNotice.type === 'success' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  border: `1px solid ${restorationNotice.type === 'success' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  color: restorationNotice.type === 'success' ? '#4ade80' : '#f87171',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {restorationNotice.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                    <span style={{ fontWeight: 500 }}>{restorationNotice.text}</span>
+                  </div>
+                  <button onClick={() => setRestorationNotice(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* Stats & Overview Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Users size={14} color="#60a5fa" />
+                    <span>Total Joueurs Détectés</span>
+                  </div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.3rem' }}>
+                    {recoveryData?.stats.totalFound ?? (loadingRecovery ? '...' : 0)}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Issus des conversations bot &amp; logs
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Zap size={14} color="#fbbf24" />
+                    <span>Prêts à Restaurer (GRD100)</span>
+                  </div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', marginTop: '0.3rem' }}>
+                    {recoveryData?.stats.readyToRestore ?? (loadingRecovery ? '...' : 0)}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#d97706', marginTop: '0.2rem' }}>
+                    Non encore assignés à GRD100
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <ShieldCheck size={14} color="#4ade80" />
+                    <span>Déjà Restaurés (GRD100)</span>
+                  </div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#4ade80', marginTop: '0.3rem' }}>
+                    {recoveryData?.stats.alreadyRestoredGrd100 ?? (loadingRecovery ? '...' : 0)}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.2rem' }}>
+                    Présents dans les demandes actives
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(147, 51, 234, 0.05)', border: '1px solid rgba(147, 51, 234, 0.2)' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <ImageIcon size={14} color="#c084fc" />
+                    <span>Captures Récupérées</span>
+                  </div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#c084fc', marginTop: '0.3rem' }}>
+                    {recoveryData?.stats.diskScreenshotsCount ?? 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#9333ea', marginTop: '0.2rem' }}>
+                    Preuves images sur le serveur
+                  </div>
+                </div>
+              </div>
+
+              {/* 1-Click Action Bar */}
+              <div style={{
+                padding: '1.25rem 1.5rem',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.08) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fef3c7', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles size={18} color="#fbbf24" />
+                    Restauration Automatique des 10 Joueurs GRD100
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#fde68a' }}>
+                    Restaure en un clic les 10 joueurs trouvés avec le code promo <b>GRD100</b>, leurs identifiants bookmaker et statut <b>APPROUVÉ</b>.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#fde68a' }}>Bookmaker :</label>
+                    <input
+                      type="text"
+                      value={recoveryBookmaker}
+                      onChange={(e) => setRecoveryBookmaker(e.target.value)}
+                      className="input"
+                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: '110px', background: 'rgba(0, 0, 0, 0.4)', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#fde68a' }}>Statut :</label>
+                    <select
+                      value={recoveryStatus}
+                      onChange={(e: any) => setRecoveryStatus(e.target.value)}
+                      className="input"
+                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', background: 'rgba(0, 0, 0, 0.4)', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                    >
+                      <option value="APPROVED">APPROUVÉ ✅</option>
+                      <option value="PENDING">EN ATTENTE ⏳</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleRestoreTopTen}
+                    disabled={isRestoringGrd100 || loadingRecovery}
+                    className="btn"
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: '#000',
+                      fontWeight: 700,
+                      padding: '0.65rem 1.4rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      borderRadius: '8px',
+                      cursor: isRestoringGrd100 ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
+                    }}
+                  >
+                    {isRestoringGrd100 ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Restauration en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck size={16} />
+                        <span>Restaurer les 10 Joueurs (GRD100)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Telegram Lookup Tool */}
+              <div style={{
+                padding: '1rem 1.25rem',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Bot size={16} color="#60a5fa" />
+                    Vérification Directe Telegram Bot API (Recherche d&apos;ID)
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    Interroge les serveurs Telegram en temps réel
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Entrez un Telegram Chat ID (ex: 8655088287, 8541029191)..."
+                    value={manualChatIdInput}
+                    onChange={(e) => setManualChatIdInput(e.target.value)}
+                    className="input"
+                    style={{ flex: 1, padding: '0.5rem 0.8rem', fontSize: '0.85rem' }}
+                  />
+                  <button
+                    onClick={handleManualVerify}
+                    disabled={manualVerifying || !manualChatIdInput.trim()}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    {manualVerifying ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    <span>Vérifier sur Telegram</span>
+                  </button>
+                </div>
+
+                {manualVerifiedResult && (
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    background: manualVerifiedResult.found ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${manualVerifiedResult.found ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    {manualVerifiedResult.found ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <ShieldCheck size={18} color="#4ade80" />
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.9rem' }}>
+                            {manualVerifiedResult.profile.first_name} {manualVerifiedResult.profile.last_name || ''}
+                            {manualVerifiedResult.profile.username && (
+                              <span style={{ color: '#60a5fa', marginLeft: '0.4rem' }}>@{manualVerifiedResult.profile.username}</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            Chat ID : <code>{manualVerifiedResult.chatId}</code> • Type : {manualVerifiedResult.profile.type}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: '#f87171', fontSize: '0.85rem' }}>
+                        ❌ Utilisateur non trouvé sur Telegram ou bot non démarré avec cet ID ({manualVerifiedResult.error || 'Chat introuvable'}).
+                      </div>
+                    )}
+
+                    {manualVerifiedResult.found && (
+                      <button
+                        onClick={() => handleRestoreSinglePlayer({
+                          telegramChatId: manualVerifiedResult.chatId,
+                          telegramName: `${manualVerifiedResult.profile.first_name || ''} ${manualVerifiedResult.profile.last_name || ''}`.trim(),
+                          telegramUsername: manualVerifiedResult.profile.username || null,
+                          playerBookmakerId: `ID: ${1781100000 + Math.floor(Math.random() * 90000)}`,
+                          screenshotUrl: null,
+                          hasActiveClaimForGrd100: false,
+                          existingClaimsCount: 0,
+                          existingClaims: [],
+                          telegramProfile: { isFoundOnTelegram: true },
+                          source: 'manual',
+                        })}
+                        className="btn btn-primary"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                      >
+                        Restaurer avec GRD100
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Table Search & List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc', margin: 0 }}>
+                    Liste des Joueurs Détectés ({recoveryData?.candidates.length ?? 0})
+                  </h3>
+                  <div style={{ position: 'relative', width: '280px' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                    <input
+                      type="text"
+                      placeholder="Filtrer par nom, username, ID..."
+                      value={recoverySearch}
+                      onChange={(e) => setRecoverySearch(e.target.value)}
+                      className="input"
+                      style={{ paddingLeft: '2rem', paddingRight: '0.8rem', paddingTop: '0.4rem', paddingBottom: '0.4rem', fontSize: '0.85rem', width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Candidates Table */}
+                <div style={{
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: 'rgba(255, 255, 255, 0.01)',
+                }}>
+                  {loadingRecovery ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                      <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 1rem auto', color: '#fbbf24' }} />
+                      <div>Scan approfondi des conversations Telegram et fichiers en cours...</div>
+                    </div>
+                  ) : !recoveryData || recoveryData.candidates.length === 0 ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                      Aucun utilisateur détecté pour le moment.
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8', textAlign: 'left' }}>
+                          <th style={{ padding: '0.75rem 1rem' }}>#</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Profil Telegram</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Telegram Chat ID</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Bookmaker ID</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Capture d&apos;écran</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Statut GRD100</th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recoveryData.candidates
+                          .filter((c) => {
+                            if (!recoverySearch) return true;
+                            const q = recoverySearch.toLowerCase();
+                            return (
+                              c.telegramChatId.toLowerCase().includes(q) ||
+                              c.telegramName.toLowerCase().includes(q) ||
+                              (c.telegramUsername && c.telegramUsername.toLowerCase().includes(q)) ||
+                              (c.playerBookmakerId && c.playerBookmakerId.toLowerCase().includes(q))
+                            );
+                          })
+                          .map((cand, idx) => {
+                            const isCopied = copiedChatId === cand.telegramChatId;
+                            const isPinging = pingingChatId === cand.telegramChatId;
+                            return (
+                              <tr
+                                key={cand.telegramChatId}
+                                style={{
+                                  borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                                  background: cand.hasActiveClaimForGrd100 ? 'rgba(34, 197, 94, 0.03)' : idx < 10 ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                                }}
+                              >
+                                <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontWeight: 600 }}>
+                                  {idx + 1}
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <div style={{
+                                      width: '32px',
+                                      height: '32px',
+                                      borderRadius: '50%',
+                                      background: cand.telegramProfile.isFoundOnTelegram ? 'rgba(34, 197, 94, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                                      color: cand.telegramProfile.isFoundOnTelegram ? '#4ade80' : '#818cf8',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem',
+                                    }}>
+                                      {cand.telegramName ? cand.telegramName.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: 600, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                        {cand.telegramName}
+                                        {cand.telegramProfile.isFoundOnTelegram && (
+                                          <span title="Profil vérifié sur Telegram" style={{ color: '#4ade80', fontSize: '0.75rem' }}>✓</span>
+                                        )}
+                                      </div>
+                                      {cand.telegramUsername ? (
+                                        <a
+                                          href={`https://t.me/${cand.telegramUsername}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          style={{ fontSize: '0.75rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                        >
+                                          @{cand.telegramUsername}
+                                          <ExternalLink size={10} />
+                                        </a>
+                                      ) : (
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Pas de @username</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <code style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '0.2rem 0.4rem', borderRadius: '4px', color: '#cbd5e1' }}>
+                                      {cand.telegramChatId}
+                                    </code>
+                                    <button
+                                      onClick={() => copyToClipboard(cand.telegramChatId)}
+                                      title="Copier le Chat ID"
+                                      style={{ background: 'none', border: 'none', color: isCopied ? '#4ade80' : '#64748b', cursor: 'pointer', padding: '2px' }}
+                                    >
+                                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
+                                  <span style={{ color: cand.playerBookmakerId ? '#f8fafc' : '#64748b' }}>
+                                    {cand.playerBookmakerId || 'Auto-généré à la restauration'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
+                                  {cand.screenshotUrl ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                      <img
+                                        src={cand.screenshotUrl}
+                                        alt="Preuve"
+                                        style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255, 255, 255, 0.1)', cursor: 'pointer' }}
+                                        onClick={() => setPreviewImageUrl(cand.screenshotUrl)}
+                                      />
+                                      <button
+                                        onClick={() => setPreviewImageUrl(cand.screenshotUrl)}
+                                        style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                                      >
+                                        Voir
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Aucune</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
+                                  {cand.hasActiveClaimForGrd100 ? (
+                                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', fontSize: '0.75rem', border: '1px solid rgba(34, 197, 94, 0.3)', fontWeight: 600 }}>
+                                      Restauré GRD100 ✅
+                                    </span>
+                                  ) : idx < 10 ? (
+                                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontSize: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 600 }}>
+                                      Prêt pour GRD100 ⚡
+                                    </span>
+                                  ) : (
+                                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.05)', color: '#94a3b8', fontSize: '0.75rem' }}>
+                                      Détecté
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                    <button
+                                      onClick={() => handlePingUser(cand.telegramChatId)}
+                                      disabled={isPinging}
+                                      title="Envoyer un message de test via le Bot"
+                                      className="btn btn-secondary"
+                                      style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                    >
+                                      {isPinging ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                                      <span>Tester Ping</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => handleRestoreSinglePlayer(cand)}
+                                      className="btn btn-primary"
+                                      style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                                    >
+                                      {cand.hasActiveClaimForGrd100 ? 'Re-valider' : 'Restaurer'}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '1.25rem 1.75rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.02)',
+            }}>
+              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                💡 Astuce : Après la restauration, les joueurs apparaîtront immédiatement dans l&apos;onglet <b>Joueurs &amp; Vérifications</b>.
+              </div>
+              <button
+                onClick={() => setShowRecoveryModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '0.6rem 1.5rem' }}
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Database Statistics Modal */}
       {showStatsModal && (

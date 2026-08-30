@@ -155,9 +155,74 @@ export interface DatabaseStats {
   telegramSteps: Record<string, number>;
 }
 
+export interface RecoveredCandidate {
+  telegramChatId: string;
+  telegramName: string;
+  telegramUsername: string | null;
+  playerBookmakerId: string | null;
+  screenshotUrl: string | null;
+  hasActiveClaimForGrd100: boolean;
+  existingClaimsCount: number;
+  existingClaims: {
+    code: string;
+    bookmaker: string;
+    status: string;
+    playerBookmakerId: string | null;
+  }[];
+  telegramProfile: {
+    isFoundOnTelegram: boolean;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    photoUrl?: string;
+    bio?: string;
+  };
+  source: string;
+  lastSeen?: string;
+}
+
+export interface RecoveryScanResult {
+  candidates: RecoveredCandidate[];
+  stats: {
+    totalFound: number;
+    alreadyRestoredGrd100: number;
+    readyToRestore: number;
+    diskScreenshotsCount: number;
+  };
+  screenshotsOnDisk: { fileName: string; fileId: string; size: number; createdAt: string }[];
+}
+
 export const api = {
   // Stats
   getDatabaseStats: () => apiFetch<DatabaseStats>('/stats'),
+
+  // Recovery Hub
+  getRecoveryScan: () => apiFetch<RecoveryScanResult>('/recovery/scan'),
+  restoreTopTenGrd100: (options?: { bookmaker?: string; status?: 'APPROVED' | 'PENDING' }) =>
+    apiFetch<{
+      success: boolean;
+      promoCode: string;
+      bookmaker: string;
+      totalProcessed: number;
+      newlyCreatedCount: number;
+      updatedCount: number;
+    }>('/recovery/restore-10-grd100', { method: 'POST', data: options || {} }),
+  restoreCustomPlayers: (data: {
+    promoCode?: string;
+    bookmaker?: string;
+    status?: 'APPROVED' | 'PENDING' | 'REJECTED';
+    players: {
+      telegramChatId: string;
+      telegramUsername?: string | null;
+      telegramName?: string | null;
+      playerBookmakerId?: string | null;
+      screenshotUrl?: string | null;
+    }[];
+  }) => apiFetch<any>('/recovery/restore', { method: 'POST', data }),
+  verifyTelegramChat: (chatId: string) =>
+    apiFetch<{ chatId: string; found: boolean; profile: any }>(`/recovery/verify/${chatId}`),
+  pingTelegramUser: (data: { telegramChatId: string; message?: string }) =>
+    apiFetch<any>('/recovery/ping', { method: 'POST', data }),
 
   // Promo codes
   getPromoCodes: () => apiFetch<PromoCodeItem[]>('/promocodes'),
