@@ -199,13 +199,13 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                        {order.claimedCount} / {order.targetAccounts} joueurs enregistrés
-                      </span>
-                      <span style={{ color: 'var(--accent-secondary)', fontWeight: 700 }}>{percentage}%</span>
-                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {order.claimedCount} / {order.targetAccounts} joueurs approuvés
+                        </span>
+                        <span style={{ color: 'var(--accent-secondary)', fontWeight: 700 }}>{percentage}%</span>
+                      </div>
                     <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
                       <div style={{
                         width: `${percentage}%`, height: '100%',

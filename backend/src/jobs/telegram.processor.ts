@@ -219,15 +219,10 @@ export class TelegramProcessor extends WorkerHost {
 
       const freshOrder = await this.prisma.order.findUnique({
         where: { id: currentOrder.id },
-        select: { claimedCount: true, targetAccounts: true },
+        select: { claimedCount: true, targetAccounts: true, status: true },
       });
 
-      if (!freshOrder || freshOrder.claimedCount >= freshOrder.targetAccounts) {
-        // Order is already full — mark it completed and turn the player away
-        await this.prisma.order.update({
-          where: { id: currentOrder.id },
-          data: { status: 'COMPLETED' },
-        });
+      if (!freshOrder || freshOrder.status !== 'ACTIVE' || (freshOrder.targetAccounts > 0 && freshOrder.claimedCount >= freshOrder.targetAccounts)) {
         await this.telegramService.sendMessage(
           chatId,
           `⚠️ <b>العرض اكتمل للتو!</b>\n\nللأسف، هاد العرض وصل للعدد المطلوب من المشتركين. تابع الشات باش يوصلك إشعار بالعروض الجديدة!`,
@@ -253,20 +248,8 @@ export class TelegramProcessor extends WorkerHost {
         },
       });
 
-      // Increment claimed count and get the fresh updated value atomically
-      const updatedOrder = await this.prisma.order.update({
-        where: { id: currentOrder.id },
-        data: { claimedCount: { increment: 1 } },
-        select: { claimedCount: true, targetAccounts: true },
-      });
-
-      // Use the fresh post-increment value — not the stale pre-fetched object
-      if (updatedOrder.claimedCount >= updatedOrder.targetAccounts) {
-        await this.prisma.order.update({
-          where: { id: currentOrder.id },
-          data: { status: 'COMPLETED' },
-        });
-      }
+      // Note: We do NOT increment claimedCount or mark the order COMPLETED here.
+      // The campaign remains open until the admin APPROVES the target number of players.
 
       // Save claimId + context in conversation metadata for screenshot update step
       await this.prisma.telegramConversationState.update({

@@ -346,7 +346,7 @@ export default function SimulatorPage() {
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <p><strong>Code Promo :</strong> <code style={{ color: 'var(--accent-primary)' }}>{activeOrder.promoCode.code}</code></p>
                 <p><strong>Bookmaker :</strong> {activeOrder.promoCode.bookmaker}</p>
-                <p><strong>Objectif :</strong> {activeOrder.claimedCount} / {activeOrder.targetAccounts} joueurs</p>
+                <p><strong>Objectif :</strong> {activeOrder.claimedCount} / {activeOrder.targetAccounts} joueurs approuvés</p>
                 <p><strong>Étape Actuelle :</strong> <code>{stepState}</code></p>
                 {tempBookmakerId && <p><strong>ID Soumis :</strong> <code>{tempBookmakerId}</code></p>}
                 <p><strong>Codes Réclamés :</strong>{' '}

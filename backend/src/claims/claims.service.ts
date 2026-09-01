@@ -34,6 +34,41 @@ export class ClaimsService {
     }
   }
 
+  /**
+   * Synchronizes an order's claimedCount with actual APPROVED claims count,
+   * and marks the order COMPLETED only when approvedCount >= targetAccounts.
+   * If approvedCount falls below targetAccounts, it reopens completed orders to ACTIVE.
+   */
+  async syncOrderStatus(orderId?: string | null) {
+    if (!orderId) return;
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { claims: { select: { status: true } } },
+      });
+      if (!order) return;
+
+      const approvedCount = order.claims.filter(c => c.status === 'APPROVED').length;
+      let newStatus = order.status;
+
+      if (order.targetAccounts > 0 && approvedCount >= order.targetAccounts) {
+        newStatus = 'COMPLETED';
+      } else if (order.status === 'COMPLETED' && approvedCount < order.targetAccounts) {
+        newStatus = 'ACTIVE';
+      }
+
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          claimedCount: approvedCount,
+          status: newStatus,
+        },
+      });
+    } catch (err) {
+      console.error(`Error syncing order progress for order ${orderId}:`, err);
+    }
+  }
+
   async create(data: {
     telegramChatId: string;
     telegramUsername?: string;
@@ -42,6 +77,7 @@ export class ClaimsService {
     orderId: string;
     playerBookmakerId: string;
     screenshotUrl?: string;
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED';
   }) {
     // Validate uniqueness globally
     const existing = await this.prisma.playerClaim.findFirst({
@@ -60,7 +96,7 @@ export class ClaimsService {
         orderId: data.orderId,
         playerBookmakerId: data.playerBookmakerId,
         screenshotUrl: data.screenshotUrl || 'simulated_screenshot',
-        status: 'PENDING',
+        status: data.status || 'PENDING',
       },
       include: {
         promoCode: true,
@@ -68,11 +104,8 @@ export class ClaimsService {
       },
     });
 
-    // Increment order claimedCount
-    await this.prisma.order.update({
-      where: { id: data.orderId },
-      data: { claimedCount: { increment: 1 } },
-    });
+    // Synchronize order progress based on approved claims
+    await this.syncOrderStatus(data.orderId);
 
     return claim;
   }
@@ -101,6 +134,11 @@ export class ClaimsService {
       include: { promoCode: true, order: true },
     });
 
+    // Synchronize order status based on updated approved count
+    if (claim.orderId) {
+      await this.syncOrderStatus(claim.orderId);
+    }
+
     // Notify the player via Telegram in Arabic / Moroccan Darija
     try {
       let channelUrl = claim.order?.telegramChannelUrl || 'https://t.me/MARROCCINHO_FREE_SOLD';
@@ -126,14 +164,6 @@ export class ClaimsService {
           { inline_keyboard },
         );
       } else {
-        // Decrement claimedCount on campaign order to free up quota
-        if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
-          await this.prisma.order.update({
-            where: { id: claim.orderId },
-            data: { claimedCount: { decrement: 1 } },
-          }).catch(() => {});
-        }
-
         const inline_keyboard = [
           [
             { text: '🎁 عرض عروض أخرى', callback_data: 'show_offers' },
@@ -177,12 +207,9 @@ export class ClaimsService {
     // Delete the claim record
     await this.prisma.playerClaim.delete({ where: { id } });
 
-    // Free up order quota if order exists
-    if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
-      await this.prisma.order.update({
-        where: { id: claim.orderId },
-        data: { claimedCount: { decrement: 1 } },
-      });
+    // Sync order progress
+    if (claim.orderId) {
+      await this.syncOrderStatus(claim.orderId);
     }
 
     // Also reset player's conversation state so they can restart cleanly
@@ -322,10 +349,7 @@ export class ClaimsService {
     }
 
     if (addedCount > 0) {
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: { claimedCount: { increment: addedCount } },
-      });
+      await this.syncOrderStatus(order.id);
     }
 
     return {
@@ -354,17 +378,20 @@ export class ClaimsService {
       throw new NotFoundException('Aucune consommation trouvée pour cet utilisateur.');
     }
 
+    const affectedOrderIds = new Set<string>();
+
     for (const claim of claimsToDelete) {
       if (claim.screenshotUrl) {
         this.deleteScreenshotFromDisk(claim.screenshotUrl);
       }
-      await this.prisma.playerClaim.delete({ where: { id: claim.id } });
-      if (claim.orderId && claim.order && claim.order.claimedCount > 0) {
-        await this.prisma.order.update({
-          where: { id: claim.orderId },
-          data: { claimedCount: { decrement: 1 } },
-        }).catch(() => {});
+      if (claim.orderId) {
+        affectedOrderIds.add(claim.orderId);
       }
+      await this.prisma.playerClaim.delete({ where: { id: claim.id } });
+    }
+
+    for (const orderId of affectedOrderIds) {
+      await this.syncOrderStatus(orderId);
     }
 
     // Reset conversation state

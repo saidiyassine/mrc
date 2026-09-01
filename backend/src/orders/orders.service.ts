@@ -31,7 +31,7 @@ export class OrdersService {
   }
 
   async findAll() {
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         promoCode: true,
@@ -40,6 +40,11 @@ export class OrdersService {
         }
       },
     });
+
+    return orders.map(order => ({
+      ...order,
+      claimedCount: order.claims ? order.claims.filter(c => c.status === 'APPROVED').length : order.claimedCount,
+    }));
   }
 
   async create(data: {
